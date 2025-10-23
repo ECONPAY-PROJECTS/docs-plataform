@@ -1,0 +1,139 @@
+---
+title: "GET /auth"
+api: "GET https://api.econpay.com.br/auth"
+auth: "bearer"
+description: "Obter informações do usuário autenticado"
+---
+
+## Descrição
+
+Retorna as informações do usuário autenticado. Útil para validar se o token JWT ainda é válido.
+
+## Headers
+
+<ParamField header="Authorization" type="string" required>
+  Bearer token JWT obtido no login
+</ParamField>
+
+## Response
+
+<ResponseField name="id" type="number">
+  ID do usuário
+</ResponseField>
+
+<ResponseField name="name" type="string">
+  Nome do usuário
+</ResponseField>
+
+<ResponseField name="email" type="string">
+  Email do usuário
+</ResponseField>
+
+<ResponseField name="role" type="string">
+  Papel do usuário (admin, app, client)
+</ResponseField>
+
+<ResponseField name="iat" type="number">
+  Timestamp de quando o token foi emitido
+</ResponseField>
+
+<ResponseField name="exp" type="number">
+  Timestamp de quando o token expira
+</ResponseField>
+
+<RequestExample>
+
+```bash cURL
+curl --request GET \
+  --url https://api.econpay.com.br/auth \
+  --header 'Authorization: Bearer SEU_TOKEN_JWT'
+```
+
+```javascript JavaScript
+const response = await fetch('https://api.econpay.com.br/auth', {
+  headers: {
+    'Authorization': `Bearer ${token}`
+  }
+});
+
+const user = await response.json();
+console.log('Usuário:', user.name);
+console.log('Token expira em:', new Date(user.exp * 1000));
+```
+
+```python Python
+import requests
+
+response = requests.get(
+    'https://api.econpay.com.br/auth',
+    headers={'Authorization': f'Bearer {token}'}
+)
+
+user = response.json()
+print(f'Usuário: {user["name"]}')
+```
+
+```php PHP
+<?php
+$ch = curl_init('https://api.econpay.com.br/auth');
+
+curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+curl_setopt($ch, CURLOPT_HTTPHEADER, [
+    'Authorization: Bearer ' . $token
+]);
+
+$response = curl_exec($ch);
+$user = json_decode($response, true);
+
+echo 'Usuário: ' . $user['name'];
+curl_close($ch);
+?>
+```
+
+</RequestExample>
+
+<ResponseExample>
+
+```json 200 - Success
+{
+  "id": 1,
+  "name": "João da Silva",
+  "email": "joao@exemplo.com",
+  "role": "admin",
+  "iat": 1640123456,
+  "exp": 1640127056
+}
+```
+
+```json 401 - Unauthorized
+{
+  "statusCode": 401,
+  "message": "Unauthorized"
+}
+```
+
+</ResponseExample>
+
+## Validar Token
+
+Use este endpoint para verificar se o token ainda é válido:
+
+```javascript
+async function isTokenValid(token) {
+  try {
+    const response = await fetch('https://api.econpay.com.br/auth', {
+      headers: { 'Authorization': `Bearer ${token}` }
+    });
+    
+    if (response.ok) {
+      const user = await response.json();
+      const now = Date.now() / 1000;
+      return user.exp > now; // Verifica se não expirou
+    }
+    
+    return false;
+  } catch (error) {
+    return false;
+  }
+}
+```

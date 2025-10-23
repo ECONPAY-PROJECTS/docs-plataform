@@ -1,0 +1,491 @@
+---
+title: "Webhooks"
+description: "Receba notificações em tempo real sobre mudanças de status"
+---
+
+## O que são Webhooks?
+
+Webhooks são notificações HTTP enviadas automaticamente pela EconPay quando eventos importantes acontecem, como:
+
+- Pagamento aprovado
+- Pagamento recusado
+- Reembolso processado
+- Boleto pago
+
+Em vez de ficar consultando a API constantemente (polling), você recebe notificações instantâneas.
+
+## Como Funcionam
+
+<Steps>
+  <Step title="Configure a URL">
+    No dashboard, configure a URL que receberá as notificações
+  </Step>
+  
+  <Step title="Evento ocorre">
+    Um pagamento é aprovado, por exemplo
+  </Step>
+  
+  <Step title="EconPay envia POST">
+    Enviamos um POST HTTP para sua URL com os dados do evento
+  </Step>
+  
+  <Step title="Seu sistema processa">
+    Você recebe, valida e processa a notificação
+  </Step>
+  
+  <Step title="Retorna 200 OK">
+    Seu servidor responde com status 200 para confirmar recebimento
+  </Step>
+</Steps>
+
+## Configuração
+
+### 1. Criar Endpoint
+
+Crie um endpoint em sua aplicação para receber webhooks:
+
+```javascript Node.js/Express
+app.post('/webhooks/econpay', express.json(), (req, res) => {
+  const event = req.body;
+  
+  console.log('Webhook recebido:', event);
+  
+  // Processar evento
+  switch (event.event) {
+    case 'payment.approved':
+      handlePaymentApproved(event);
+      break;
+    case 'payment.failed':
+      handlePaymentFailed(event);
+      break;
+    case 'payment.refunded':
+      handlePaymentRefunded(event);
+      break;
+    default:
+      console.log('Evento desconhecido:', event.event);
+  }
+  
+  // IMPORTANTE: Retornar 200 OK
+  res.status(200).json({ received: true });
+});
+```
+
+```python Python/Flask
+@app.route('/webhooks/econpay', methods=['POST'])
+def webhook():
+    event = request.json
+    
+    print('Webhook recebido:', event)
+    
+    # Processar evento
+    if event['event'] == 'payment.approved':
+        handle_payment_approved(event)
+    elif event['event'] == 'payment.failed':
+        handle_payment_failed(event)
+    elif event['event'] == 'payment.refunded':
+        handle_payment_refunded(event)
+    else:
+        print('Evento desconhecido:', event['event'])
+    
+    # IMPORTANTE: Retornar 200 OK
+    return jsonify({'received': True}), 200
+```
+
+```php PHP
+<?php
+// webhook.php
+
+$payload = file_get_contents('php://input');
+$event = json_decode($payload, true);
+
+error_log('Webhook recebido: ' . print_r($event, true));
+
+// Processar evento
+switch ($event['event']) {
+    case 'payment.approved':
+        handlePaymentApproved($event);
+        break;
+    case 'payment.failed':
+        handlePaymentFailed($event);
+        break;
+    case 'payment.refunded':
+        handlePaymentRefunded($event);
+        break;
+    default:
+        error_log('Evento desconhecido: ' . $event['event']);
+}
+
+// IMPORTANTE: Retornar 200 OK
+http_response_code(200);
+echo json_encode(['received' => true]);
+?>
+```
+
+### 2. Expor URL Publicamente
+
+Sua URL precisa ser acessível pela internet:
+
+<Tabs>
+  <Tab title="Produção">
+    Use um domínio real:
+    ```
+    https://seusite.com.br/webhooks/econpay
+    ```
+  </Tab>
+  
+  <Tab title="Desenvolvimento">
+    Use ngrok para expor localhost:
+    ```bash
+    # Instalar ngrok
+    npm install -g ngrok
+    
+    # Expor porta 3000
+    ngrok http 3000
+    
+    # Usar URL gerada
+    https://abc123.ngrok.io/webhooks/econpay
+    ```
+  </Tab>
+</Tabs>
+
+### 3. Cadastrar no Dashboard
+
+1. Acesse [Dashboard EconPay](https://app.econpay.com.br)
+2. Vá em **Configurações** > **Webhooks**
+3. Adicione sua URL
+4. Salve
+
+## Eventos Disponíveis
+
+### payment.approved
+
+Enviado quando um pagamento é aprovado.
+
+```json
+{
+  "event": "payment.approved",
+  "transaction_id": 123,
+  "order_number": "ORD-20240122-123456",
+  "status": "APPROVED",
+  "amount": 10000,
+  "payment_type": "pix",
+  "customer": {
+    "name": "João da Silva",
+    "email": "joao@exemplo.com",
+    "document": "12345678900"
+  },
+  "paid_at": "2024-01-22T10:35:00Z",
+  "created_at": "2024-01-22T10:30:00Z"
+}
+```
+
+### payment.failed
+
+Enviado quando um pagamento falha ou é recusado.
+
+```json
+{
+  "event": "payment.failed",
+  "transaction_id": 124,
+  "order_number": "ORD-20240122-123457",
+  "status": "FAILED",
+  "amount": 15000,
+  "payment_type": "credit",
+  "failure_reason": "Cartão recusado pela operadora",
+  "customer": {
+    "name": "Maria Santos",
+    "email": "maria@exemplo.com",
+    "document": "98765432100"
+  },
+  "failed_at": "2024-01-22T11:00:00Z",
+  "created_at": "2024-01-22T10:59:00Z"
+}
+```
+
+### payment.refunded
+
+Enviado quando um reembolso é processado.
+
+```json
+{
+  "event": "payment.refunded",
+  "transaction_id": 123,
+  "order_number": "ORD-20240122-123456",
+  "status": "REFUNDED",
+  "amount": 10000,
+  "refund_amount": 10000,
+  "payment_type": "pix",
+  "refund_reason": "Solicitação do cliente",
+  "customer": {
+    "name": "João da Silva",
+    "email": "joao@exemplo.com",
+    "document": "12345678900"
+  },
+  "refunded_at": "2024-01-22T15:00:00Z",
+  "created_at": "2024-01-22T10:30:00Z"
+}
+```
+
+## Processamento de Webhooks
+
+### Idempotência
+
+Webhooks podem ser enviados mais de uma vez. Implemente idempotência:
+
+```javascript
+const processedWebhooks = new Set();
+
+app.post('/webhooks/econpay', async (req, res) => {
+  const event = req.body;
+  const webhookId = `${event.event}-${event.transaction_id}-${event.paid_at || event.failed_at || event.refunded_at}`;
+  
+  // Verificar se já processamos este webhook
+  if (processedWebhooks.has(webhookId)) {
+    console.log('Webhook já processado:', webhookId);
+    return res.status(200).json({ received: true, duplicate: true });
+  }
+  
+  // Processar webhook
+  await processWebhook(event);
+  
+  // Marcar como processado
+  processedWebhooks.add(webhookId);
+  
+  res.status(200).json({ received: true });
+});
+```
+
+### Processamento Assíncrono
+
+Para webhooks complexos, processe de forma assíncrona:
+
+```javascript
+app.post('/webhooks/econpay', async (req, res) => {
+  const event = req.body;
+  
+  // Retornar 200 OK imediatamente
+  res.status(200).json({ received: true });
+  
+  // Processar em background
+  processWebhookAsync(event).catch(error => {
+    console.error('Erro ao processar webhook:', error);
+    // Implementar retry ou alertas
+  });
+});
+
+async function processWebhookAsync(event) {
+  // Lógica de processamento demorada
+  await updateDatabase(event);
+  await sendEmailToCustomer(event);
+  await updateInventory(event);
+}
+```
+
+### Validação
+
+Valide sempre os dados recebidos:
+
+```javascript
+function validateWebhook(event) {
+  // Verificar campos obrigatórios
+  if (!event.event || !event.transaction_id) {
+    throw new Error('Webhook inválido: campos obrigatórios faltando');
+  }
+  
+  // Verificar tipo de evento
+  const validEvents = ['payment.approved', 'payment.failed', 'payment.refunded'];
+  if (!validEvents.includes(event.event)) {
+    throw new Error(`Evento desconhecido: ${event.event}`);
+  }
+  
+  // Verificar valores
+  if (event.amount && event.amount < 0) {
+    throw new Error('Valor inválido');
+  }
+  
+  return true;
+}
+
+app.post('/webhooks/econpay', (req, res) => {
+  try {
+    const event = req.body;
+    validateWebhook(event);
+    processWebhook(event);
+    res.status(200).json({ received: true });
+  } catch (error) {
+    console.error('Webhook inválido:', error);
+    res.status(400).json({ error: error.message });
+  }
+});
+```
+
+## Retry e Timeout
+
+### Comportamento da EconPay
+
+- **Timeout:** 30 segundos
+- **Retries:** 3 tentativas
+- **Intervalo:** 1 minuto entre tentativas
+
+Se seu servidor não responder com 200 OK em 30 segundos, tentaremos novamente.
+
+### Boas Práticas
+
+<AccordionGroup>
+  <Accordion title="Responda rapidamente">
+    Retorne 200 OK em menos de 5 segundos. Processe tarefas pesadas de forma assíncrona.
+  </Accordion>
+  
+  <Accordion title="Implemente retry no seu lado">
+    Se falhar ao processar, implemente sua própria lógica de retry.
+  </Accordion>
+  
+  <Accordion title="Log tudo">
+    Registre todos os webhooks recebidos para debug e auditoria.
+  </Accordion>
+  
+  <Accordion title="Monitore falhas">
+    Configure alertas para webhooks que falharem repetidamente.
+  </Accordion>
+</AccordionGroup>
+
+## Testando Webhooks
+
+### Em Desenvolvimento
+
+Use ngrok para receber webhooks localmente:
+
+```bash
+# Terminal 1: Iniciar sua aplicação
+npm start
+
+# Terminal 2: Expor com ngrok
+ngrok http 3000
+
+# Copiar URL gerada e cadastrar no dashboard
+https://abc123.ngrok.io/webhooks/econpay
+```
+
+### Ferramentas de Teste
+
+<CardGroup cols={2}>
+  <Card title="webhook.site" icon="browser" href="https://webhook.site">
+    Inspecione payloads sem código
+  </Card>
+  <Card title="ngrok" icon="globe" href="https://ngrok.com">
+    Exponha localhost para internet
+  </Card>
+  <Card title="Postman" icon="paper-plane" href="https://postman.com">
+    Simule webhooks manualmente
+  </Card>
+  <Card title="RequestBin" icon="box" href="https://requestbin.com">
+    Capture e inspecione requisições
+  </Card>
+</CardGroup>
+
+### Simular Webhook Manualmente
+
+```bash
+curl --request POST \
+  --url http://localhost:3000/webhooks/econpay \
+  --header 'Content-Type: application/json' \
+  --data '{
+    "event": "payment.approved",
+    "transaction_id": 123,
+    "order_number": "ORD-TEST-001",
+    "status": "APPROVED",
+    "amount": 10000,
+    "payment_type": "pix",
+    "paid_at": "2024-01-22T10:35:00Z"
+  }'
+```
+
+## Segurança
+
+<Warning>
+  **Importante:** Sempre valide que o webhook veio realmente da EconPay.
+</Warning>
+
+### Validar IP de Origem
+
+```javascript
+const ECONPAY_IPS = ['IP_DA_ECONPAY_1', 'IP_DA_ECONPAY_2'];
+
+app.post('/webhooks/econpay', (req, res) => {
+  const clientIp = req.ip || req.connection.remoteAddress;
+  
+  if (!ECONPAY_IPS.includes(clientIp)) {
+    console.warn('Webhook de IP não autorizado:', clientIp);
+    return res.status(403).json({ error: 'Forbidden' });
+  }
+  
+  // Processar webhook
+  processWebhook(req.body);
+  res.status(200).json({ received: true });
+});
+```
+
+### Verificar Dados
+
+Sempre consulte a API para confirmar o status:
+
+```javascript
+async function processPaymentApproved(event) {
+  // Consultar API para confirmar
+  const transaction = await fetch(
+    `https://api.econpay.com.br/transactions/${event.transaction_id}`,
+    {
+      headers: { 'Authorization': `Bearer ${token}` }
+    }
+  ).then(r => r.json());
+  
+  // Verificar se realmente está aprovado
+  if (transaction.status !== 'APPROVED') {
+    console.warn('Status divergente no webhook');
+    return;
+  }
+  
+  // Processar pagamento
+  await markOrderAsPaid(event.order_number);
+}
+```
+
+## Troubleshooting
+
+### Webhook não está chegando
+
+<Steps>
+  <Step title="Verifique a URL">
+    Certifique-se de que a URL está correta e acessível
+  </Step>
+  
+  <Step title="Teste manualmente">
+    Use cURL para testar se seu endpoint responde
+  </Step>
+  
+  <Step title="Verifique firewall">
+    Certifique-se de que não há firewall bloqueando
+  </Step>
+  
+  <Step title="Veja os logs">
+    Consulte logs no dashboard para ver tentativas de envio
+  </Step>
+</Steps>
+
+### Webhook chegando mas não processando
+
+- Verifique logs da sua aplicação
+- Certifique-se de retornar 200 OK
+- Valide o formato do JSON recebido
+- Teste com dados mockados
+
+## Próximos Passos
+
+<CardGroup cols={2}>
+  <Card title="Criar Pagamento" icon="credit-card" href="/api-reference/payments/create-payment">
+    Processe pagamentos para receber webhooks
+  </Card>
+  <Card title="Listar Transações" icon="list" href="/api-reference/transactions/list">
+    Consulte transações via API
+  </Card>
+</CardGroup>

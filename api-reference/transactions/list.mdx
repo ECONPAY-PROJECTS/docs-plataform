@@ -1,0 +1,381 @@
+---
+title: "GET /transactions"
+api: "GET https://api.econpay.com.br/transactions"
+auth: "bearer"
+description: "Listar transações com paginação e filtros"
+---
+
+## Descrição
+
+Retorna uma lista paginada de transações com suporte a múltiplos filtros. Útil para consultar histórico de pagamentos, gerar relatórios e reconciliação.
+
+## Headers
+
+<ParamField header="Authorization" type="string" required>
+  Bearer token JWT obtido no login
+</ParamField>
+
+## Query Parameters
+
+<ParamField query="page" type="number" default="1">
+  Número da página
+</ParamField>
+
+<ParamField query="limit" type="number" default="10">
+  Itens por página (máximo: 100)
+</ParamField>
+
+<ParamField query="orderBy" type="string" default="created_at">
+  Campo para ordenação: `created_at`, `updated_at`, `amount`
+</ParamField>
+
+<ParamField query="direction" type="string" default="DESC">
+  Direção da ordenação: `ASC` ou `DESC`
+</ParamField>
+
+<ParamField query="status" type="array">
+  Filtrar por status (pode enviar múltiplos)
+  - `1` = PENDING
+  - `2` = APPROVED
+  - `3` = FAILED
+  - `4` = REFUNDED
+</ParamField>
+
+<ParamField query="type" type="string">
+  Filtrar por tipo de pagamento: `pix`, `credit`, `debit`, `invoice`
+</ParamField>
+
+<ParamField query="company_id" type="number">
+  Filtrar por ID do estabelecimento
+</ParamField>
+
+<ParamField query="customer_id" type="number">
+  Filtrar por ID do cliente
+</ParamField>
+
+<ParamField query="amountStart" type="number">
+  Valor mínimo em centavos
+</ParamField>
+
+<ParamField query="amountEnd" type="number">
+  Valor máximo em centavos
+</ParamField>
+
+<ParamField query="createdAtStart" type="string">
+  Data inicial de criação (ISO 8601)
+</ParamField>
+
+<ParamField query="createdAtEnd" type="string">
+  Data final de criação (ISO 8601)
+</ParamField>
+
+## Response
+
+<ResponseField name="data" type="array">
+  Lista de transações
+  <Expandable title="properties">
+    <ResponseField name="id" type="number">
+      ID da transação
+    </ResponseField>
+    
+    <ResponseField name="order_number" type="string">
+      Número do pedido
+    </ResponseField>
+    
+    <ResponseField name="status" type="number">
+      Status (1=PENDING, 2=APPROVED, 3=FAILED, 4=REFUNDED)
+    </ResponseField>
+    
+    <ResponseField name="amount" type="number">
+      Valor em centavos
+    </ResponseField>
+    
+    <ResponseField name="payment_type" type="string">
+      Tipo de pagamento
+    </ResponseField>
+    
+    <ResponseField name="customer_name" type="string">
+      Nome do cliente
+    </ResponseField>
+    
+    <ResponseField name="created_at" type="string">
+      Data de criação
+    </ResponseField>
+  </Expandable>
+</ResponseField>
+
+<ResponseField name="total" type="number">
+  Total de registros
+</ResponseField>
+
+<ResponseField name="page" type="number">
+  Página atual
+</ResponseField>
+
+<ResponseField name="lastPage" type="number">
+  Última página
+</ResponseField>
+
+<ResponseField name="itemsPerPage" type="number">
+  Itens por página
+</ResponseField>
+
+<RequestExample>
+
+```bash Listar Todas
+curl --request GET \
+  --url 'https://api.econpay.com.br/transactions?page=1&limit=20' \
+  --header 'Authorization: Bearer SEU_TOKEN_JWT'
+```
+
+```bash Filtrar por Status
+curl --request GET \
+  --url 'https://api.econpay.com.br/transactions?status=2&status=4' \
+  --header 'Authorization: Bearer SEU_TOKEN_JWT'
+```
+
+```bash Filtrar por Período
+curl --request GET \
+  --url 'https://api.econpay.com.br/transactions?createdAtStart=2024-01-01&createdAtEnd=2024-01-31' \
+  --header 'Authorization: Bearer SEU_TOKEN_JWT'
+```
+
+```javascript JavaScript
+// Listar transações aprovadas
+const response = await fetch(
+  'https://api.econpay.com.br/transactions?status=2&page=1&limit=20',
+  {
+    headers: { 'Authorization': `Bearer ${token}` }
+  }
+);
+
+const { data, total, page, lastPage } = await response.json();
+
+console.log(`Mostrando ${data.length} de ${total} transações`);
+console.log(`Página ${page} de ${lastPage}`);
+
+data.forEach(transaction => {
+  console.log(`${transaction.order_number}: R$ ${transaction.amount / 100}`);
+});
+```
+
+```python Python
+import requests
+
+# Filtrar por período e tipo
+params = {
+    'type': 'pix',
+    'createdAtStart': '2024-01-01',
+    'createdAtEnd': '2024-01-31',
+    'page': 1,
+    'limit': 50
+}
+
+response = requests.get(
+    'https://api.econpay.com.br/transactions',
+    headers={'Authorization': f'Bearer {token}'},
+    params=params
+)
+
+data = response.json()
+
+print(f"Total: {data['total']} transações")
+for transaction in data['data']:
+    print(f"{transaction['order_number']}: R$ {transaction['amount'] / 100:.2f}")
+```
+
+```php PHP
+<?php
+// Filtrar por valor
+$params = http_build_query([
+    'amountStart' => 10000,  // R$ 100,00
+    'amountEnd' => 50000,    // R$ 500,00
+    'page' => 1,
+    'limit' => 20
+]);
+
+$ch = curl_init("https://api.econpay.com.br/transactions?{$params}");
+curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+curl_setopt($ch, CURLOPT_HTTPHEADER, [
+    'Authorization: Bearer ' . $token
+]);
+
+$response = curl_exec($ch);
+$data = json_decode($response, true);
+
+echo "Total: {$data['total']} transações\n";
+foreach ($data['data'] as $transaction) {
+    echo "{$transaction['order_number']}: R$ " . ($transaction['amount'] / 100) . "\n";
+}
+
+curl_close($ch);
+?>
+```
+
+</RequestExample>
+
+<ResponseExample>
+
+```json 200 - Success
+{
+  "data": [
+    {
+      "id": 123,
+      "order_number": "ORD-20240122-123456",
+      "status": 2,
+      "amount": 10000,
+      "payment_type": "pix",
+      "customer_name": "João da Silva",
+      "customer_email": "joao@exemplo.com",
+      "created_at": "2024-01-22T10:30:00Z",
+      "updated_at": "2024-01-22T10:35:00Z"
+    },
+    {
+      "id": 124,
+      "order_number": "ORD-20240122-123457",
+      "status": 2,
+      "amount": 31500,
+      "payment_type": "credit",
+      "customer_name": "Maria Santos",
+      "customer_email": "maria@exemplo.com",
+      "created_at": "2024-01-22T11:00:00Z",
+      "updated_at": "2024-01-22T11:01:00Z"
+    }
+  ],
+  "total": 150,
+  "page": 1,
+  "lastPage": 8,
+  "itemsPerPage": 20
+}
+```
+
+</ResponseExample>
+
+## Status das Transações
+
+| Código | Status | Descrição |
+|--------|--------|-----------|
+| 1 | PENDING | Aguardando pagamento |
+| 2 | APPROVED | Pagamento aprovado |
+| 3 | FAILED | Pagamento falhou/recusado |
+| 4 | REFUNDED | Pagamento estornado |
+
+## Exemplos de Uso
+
+### Relatório Mensal
+
+```javascript
+async function getMonthlyReport(year, month) {
+  const startDate = new Date(year, month - 1, 1).toISOString();
+  const endDate = new Date(year, month, 0, 23, 59, 59).toISOString();
+  
+  const response = await fetch(
+    `https://api.econpay.com.br/transactions?` +
+    `createdAtStart=${startDate}&` +
+    `createdAtEnd=${endDate}&` +
+    `status=2&` + // Apenas aprovadas
+    `limit=100`,
+    {
+      headers: { 'Authorization': `Bearer ${token}` }
+    }
+  );
+  
+  const { data, total } = await response.json();
+  
+  const totalAmount = data.reduce((sum, t) => sum + t.amount, 0);
+  
+  return {
+    period: `${month}/${year}`,
+    transactions: total,
+    totalAmount: totalAmount / 100,
+    byType: {
+      pix: data.filter(t => t.payment_type === 'pix').length,
+      credit: data.filter(t => t.payment_type === 'credit').length,
+      debit: data.filter(t => t.payment_type === 'debit').length
+    }
+  };
+}
+
+const report = await getMonthlyReport(2024, 1);
+console.log(`Relatório ${report.period}`);
+console.log(`Total: R$ ${report.totalAmount.toFixed(2)}`);
+console.log(`Transações: ${report.transactions}`);
+```
+
+### Paginação Completa
+
+```javascript
+async function getAllTransactions(filters = {}) {
+  const allTransactions = [];
+  let page = 1;
+  let hasMore = true;
+  
+  while (hasMore) {
+    const params = new URLSearchParams({
+      ...filters,
+      page,
+      limit: 100
+    });
+    
+    const response = await fetch(
+      `https://api.econpay.com.br/transactions?${params}`,
+      {
+        headers: { 'Authorization': `Bearer ${token}` }
+      }
+    );
+    
+    const { data, lastPage } = await response.json();
+    
+    allTransactions.push(...data);
+    hasMore = page < lastPage;
+    page++;
+  }
+  
+  return allTransactions;
+}
+
+// Buscar todas as transações aprovadas de janeiro
+const transactions = await getAllTransactions({
+  status: 2,
+  createdAtStart: '2024-01-01',
+  createdAtEnd: '2024-01-31'
+});
+
+console.log(`Total: ${transactions.length} transações`);
+```
+
+### Filtros Múltiplos
+
+```javascript
+// Buscar transações PIX aprovadas acima de R$ 100
+const response = await fetch(
+  'https://api.econpay.com.br/transactions?' +
+  'type=pix&' +
+  'status=2&' +
+  'amountStart=10000&' +
+  'orderBy=amount&' +
+  'direction=DESC',
+  {
+    headers: { 'Authorization': `Bearer ${token}` }
+  }
+);
+
+const { data } = await response.json();
+```
+
+## Próximos Passos
+
+<CardGroup cols={2}>
+  <Card title="Detalhes da Transação" icon="file-invoice" href="/api-reference/transactions/details">
+    Ver informações completas
+  </Card>
+  <Card title="Criar Pagamento" icon="credit-card" href="/api-reference/payments/create-payment">
+    Processar novo pagamento
+  </Card>
+  <Card title="Reembolso" icon="rotate-left" href="/api-reference/payments/refund">
+    Estornar transação
+  </Card>
+  <Card title="Webhooks" icon="webhook" href="/guides/webhooks">
+    Notificações automáticas
+  </Card>
+</CardGroup>

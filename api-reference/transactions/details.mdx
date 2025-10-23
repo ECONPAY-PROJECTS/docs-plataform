@@ -1,0 +1,477 @@
+---
+title: "GET /transactions/:id"
+api: "GET https://api.econpay.com.br/transactions/{id}"
+auth: "bearer"
+description: "Obter detalhes completos de uma transação"
+---
+
+## Descrição
+
+Retorna informações detalhadas de uma transação específica, incluindo dados do cliente, itens, status e informações de pagamento.
+
+## Headers
+
+<ParamField header="Authorization" type="string" required>
+  Bearer token JWT obtido no login
+</ParamField>
+
+## Path Parameters
+
+<ParamField path="id" type="number" required>
+  ID da transação
+</ParamField>
+
+## Response
+
+<ResponseField name="id" type="number">
+  ID da transação
+</ResponseField>
+
+<ResponseField name="order_number" type="string">
+  Número do pedido
+</ResponseField>
+
+<ResponseField name="status" type="number">
+  Status (1=PENDING, 2=APPROVED, 3=FAILED, 4=REFUNDED)
+</ResponseField>
+
+<ResponseField name="amount" type="number">
+  Valor total em centavos
+</ResponseField>
+
+<ResponseField name="payment_type" type="string">
+  Tipo de pagamento: pix, credit, debit, invoice
+</ResponseField>
+
+<ResponseField name="installments" type="number">
+  Número de parcelas
+</ResponseField>
+
+<ResponseField name="customer" type="object">
+  <Expandable title="properties">
+    <ResponseField name="id" type="number">
+      ID do cliente
+    </ResponseField>
+    
+    <ResponseField name="name" type="string">
+      Nome do cliente
+    </ResponseField>
+    
+    <ResponseField name="email" type="string">
+      Email do cliente
+    </ResponseField>
+    
+    <ResponseField name="document" type="string">
+      CPF/CNPJ do cliente
+    </ResponseField>
+    
+    <ResponseField name="phone" type="string">
+      Telefone do cliente
+    </ResponseField>
+  </Expandable>
+</ResponseField>
+
+<ResponseField name="items" type="array">
+  Lista de itens do pedido
+  <Expandable title="properties">
+    <ResponseField name="name" type="string">
+      Nome do produto/serviço
+    </ResponseField>
+    
+    <ResponseField name="quantity" type="number">
+      Quantidade
+    </ResponseField>
+    
+    <ResponseField name="price" type="number">
+      Preço unitário em centavos
+    </ResponseField>
+  </Expandable>
+</ResponseField>
+
+<ResponseField name="pix_qr_code" type="string">
+  QR Code PIX (apenas para PIX)
+</ResponseField>
+
+<ResponseField name="pix_qr_code_url" type="string">
+  URL da imagem do QR Code (apenas para PIX)
+</ResponseField>
+
+<ResponseField name="boleto_url" type="string">
+  URL do boleto (apenas para boleto)
+</ResponseField>
+
+<ResponseField name="boleto_barcode" type="string">
+  Código de barras (apenas para boleto)
+</ResponseField>
+
+<ResponseField name="created_at" type="string">
+  Data de criação (ISO 8601)
+</ResponseField>
+
+<ResponseField name="updated_at" type="string">
+  Data da última atualização (ISO 8601)
+</ResponseField>
+
+<ResponseField name="paid_at" type="string">
+  Data do pagamento (ISO 8601)
+</ResponseField>
+
+<ResponseField name="refunded_at" type="string">
+  Data do estorno (ISO 8601)
+</ResponseField>
+
+<RequestExample>
+
+```bash cURL
+curl --request GET \
+  --url https://api.econpay.com.br/transactions/123 \
+  --header 'Authorization: Bearer SEU_TOKEN_JWT'
+```
+
+```javascript JavaScript
+const transactionId = 123;
+
+const response = await fetch(
+  `https://api.econpay.com.br/transactions/${transactionId}`,
+  {
+    headers: { 'Authorization': `Bearer ${token}` }
+  }
+);
+
+const transaction = await response.json();
+
+console.log('Pedido:', transaction.order_number);
+console.log('Status:', transaction.status);
+console.log('Valor:', `R$ ${transaction.amount / 100}`);
+console.log('Cliente:', transaction.customer.name);
+
+if (transaction.payment_type === 'pix' && transaction.pix_qr_code) {
+  console.log('QR Code PIX:', transaction.pix_qr_code);
+}
+```
+
+```python Python
+import requests
+
+transaction_id = 123
+
+response = requests.get(
+    f'https://api.econpay.com.br/transactions/{transaction_id}',
+    headers={'Authorization': f'Bearer {token}'}
+)
+
+transaction = response.json()
+
+print(f"Pedido: {transaction['order_number']}")
+print(f"Status: {transaction['status']}")
+print(f"Valor: R$ {transaction['amount'] / 100:.2f}")
+print(f"Cliente: {transaction['customer']['name']}")
+```
+
+```php PHP
+<?php
+$transactionId = 123;
+
+$ch = curl_init("https://api.econpay.com.br/transactions/{$transactionId}");
+curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+curl_setopt($ch, CURLOPT_HTTPHEADER, [
+    'Authorization: Bearer ' . $token
+]);
+
+$response = curl_exec($ch);
+$transaction = json_decode($response, true);
+
+echo "Pedido: {$transaction['order_number']}\n";
+echo "Status: {$transaction['status']}\n";
+echo "Valor: R$ " . ($transaction['amount'] / 100) . "\n";
+echo "Cliente: {$transaction['customer']['name']}\n";
+
+curl_close($ch);
+?>
+```
+
+</RequestExample>
+
+<ResponseExample>
+
+```json 200 - PIX Transaction
+{
+  "id": 123,
+  "order_number": "ORD-20240122-123456",
+  "status": 2,
+  "amount": 10000,
+  "payment_type": "pix",
+  "installments": 1,
+  "customer": {
+    "id": 45,
+    "name": "João da Silva",
+    "email": "joao@exemplo.com",
+    "document": "12345678900",
+    "phone": "+55 11 999999999"
+  },
+  "items": [
+    {
+      "name": "Produto Teste",
+      "quantity": 1,
+      "price": 10000
+    }
+  ],
+  "pix_qr_code": "00020126580014br.gov.bcb.pix...",
+  "pix_qr_code_url": "https://api.econpay.com.br/qrcode/123.png",
+  "created_at": "2024-01-22T10:30:00Z",
+  "updated_at": "2024-01-22T10:35:00Z",
+  "paid_at": "2024-01-22T10:35:00Z"
+}
+```
+
+```json 200 - Credit Card Transaction
+{
+  "id": 124,
+  "order_number": "ORD-20240122-123457",
+  "status": 2,
+  "amount": 31500,
+  "payment_type": "credit",
+  "installments": 3,
+  "customer": {
+    "id": 46,
+    "name": "Maria Santos",
+    "email": "maria@exemplo.com",
+    "document": "98765432100",
+    "phone": "+55 11 988888888"
+  },
+  "items": [
+    {
+      "name": "Produto Premium",
+      "quantity": 1,
+      "price": 30000
+    }
+  ],
+  "shipping": {
+    "name": "Sedex",
+    "price": 1500
+  },
+  "created_at": "2024-01-22T11:00:00Z",
+  "updated_at": "2024-01-22T11:01:00Z",
+  "paid_at": "2024-01-22T11:01:00Z"
+}
+```
+
+```json 404 - Not Found
+{
+  "statusCode": 404,
+  "message": "Transação não encontrada"
+}
+```
+
+</ResponseExample>
+
+## Status das Transações
+
+| Código | Status | Descrição | Ações Disponíveis |
+|--------|--------|-----------|-------------------|
+| 1 | PENDING | Aguardando pagamento | Cancelar |
+| 2 | APPROVED | Pagamento aprovado | Estornar |
+| 3 | FAILED | Pagamento falhou | Tentar novamente |
+| 4 | REFUNDED | Pagamento estornado | Nenhuma |
+
+## Exemplos de Uso
+
+### Verificar Status
+
+```javascript
+async function checkPaymentStatus(transactionId) {
+  const response = await fetch(
+    `https://api.econpay.com.br/transactions/${transactionId}`,
+    {
+      headers: { 'Authorization': `Bearer ${token}` }
+    }
+  );
+  
+  const transaction = await response.json();
+  
+  const statusMap = {
+    1: 'Aguardando pagamento',
+    2: 'Pago',
+    3: 'Falhou',
+    4: 'Estornado'
+  };
+  
+  return {
+    orderNumber: transaction.order_number,
+    status: statusMap[transaction.status],
+    amount: transaction.amount / 100,
+    isPaid: transaction.status === 2,
+    canRefund: transaction.status === 2
+  };
+}
+
+const status = await checkPaymentStatus(123);
+console.log(`Pedido ${status.orderNumber}: ${status.status}`);
+
+if (status.canRefund) {
+  console.log('Pode ser estornado');
+}
+```
+
+### Exibir QR Code PIX
+
+```javascript
+async function displayPixQRCode(transactionId) {
+  const response = await fetch(
+    `https://api.econpay.com.br/transactions/${transactionId}`,
+    {
+      headers: { 'Authorization': `Bearer ${token}` }
+    }
+  );
+  
+  const transaction = await response.json();
+  
+  if (transaction.payment_type !== 'pix') {
+    throw new Error('Transação não é PIX');
+  }
+  
+  if (transaction.status !== 1) {
+    throw new Error('Pagamento já foi processado');
+  }
+  
+  return {
+    qrCodeImage: transaction.pix_qr_code_url,
+    qrCodeString: transaction.pix_qr_code,
+    expiresIn: '30 minutos'
+  };
+}
+
+// Uso em React
+function PixPayment({ transactionId }) {
+  const [qrCode, setQrCode] = useState(null);
+  
+  useEffect(() => {
+    displayPixQRCode(transactionId).then(setQrCode);
+  }, [transactionId]);
+  
+  if (!qrCode) return <div>Carregando...</div>;
+  
+  return (
+    <div>
+      <h2>Pague com PIX</h2>
+      <img src={qrCode.qrCodeImage} alt="QR Code PIX" />
+      <p>Ou copie o código:</p>
+      <code>{qrCode.qrCodeString}</code>
+      <p>Expira em: {qrCode.expiresIn}</p>
+    </div>
+  );
+}
+```
+
+### Gerar Recibo
+
+```javascript
+async function generateReceipt(transactionId) {
+  const response = await fetch(
+    `https://api.econpay.com.br/transactions/${transactionId}`,
+    {
+      headers: { 'Authorization': `Bearer ${token}` }
+    }
+  );
+  
+  const transaction = await response.json();
+  
+  if (transaction.status !== 2) {
+    throw new Error('Pagamento não foi aprovado');
+  }
+  
+  return {
+    orderNumber: transaction.order_number,
+    date: new Date(transaction.paid_at).toLocaleDateString('pt-BR'),
+    customer: {
+      name: transaction.customer.name,
+      email: transaction.customer.email,
+      document: transaction.customer.document
+    },
+    items: transaction.items.map(item => ({
+      name: item.name,
+      quantity: item.quantity,
+      unitPrice: item.price / 100,
+      total: (item.price * item.quantity) / 100
+    })),
+    subtotal: transaction.items.reduce((sum, item) => 
+      sum + (item.price * item.quantity), 0) / 100,
+    shipping: transaction.shipping?.price / 100 || 0,
+    total: transaction.amount / 100,
+    paymentMethod: transaction.payment_type.toUpperCase(),
+    installments: transaction.installments
+  };
+}
+
+const receipt = await generateReceipt(123);
+console.log('RECIBO DE PAGAMENTO');
+console.log(`Pedido: ${receipt.orderNumber}`);
+console.log(`Data: ${receipt.date}`);
+console.log(`Cliente: ${receipt.customer.name}`);
+console.log(`Total: R$ ${receipt.total.toFixed(2)}`);
+```
+
+### Polling de Status
+
+```javascript
+async function waitForPayment(transactionId, maxAttempts = 60) {
+  for (let i = 0; i < maxAttempts; i++) {
+    const response = await fetch(
+      `https://api.econpay.com.br/transactions/${transactionId}`,
+      {
+        headers: { 'Authorization': `Bearer ${token}` }
+      }
+    );
+    
+    const transaction = await response.json();
+    
+    // Se foi pago ou falhou, retornar
+    if (transaction.status === 2) {
+      return { success: true, transaction };
+    }
+    
+    if (transaction.status === 3) {
+      return { success: false, transaction };
+    }
+    
+    // Aguardar 5 segundos antes de tentar novamente
+    await new Promise(resolve => setTimeout(resolve, 5000));
+  }
+  
+  throw new Error('Timeout aguardando pagamento');
+}
+
+// Uso
+try {
+  const result = await waitForPayment(123);
+  
+  if (result.success) {
+    console.log('✅ Pagamento aprovado!');
+  } else {
+    console.log('❌ Pagamento falhou');
+  }
+} catch (error) {
+  console.log('⏱️ Timeout - pagamento ainda pendente');
+}
+```
+
+<Warning>
+  **Importante:** Use webhooks em vez de polling sempre que possível. Polling consome recursos e pode ter atrasos.
+</Warning>
+
+## Próximos Passos
+
+<CardGroup cols={2}>
+  <Card title="Listar Transações" icon="list" href="/api-reference/transactions/list">
+    Consultar histórico
+  </Card>
+  <Card title="Reembolso" icon="rotate-left" href="/api-reference/payments/refund">
+    Estornar transação
+  </Card>
+  <Card title="Webhooks" icon="webhook" href="/guides/webhooks">
+    Notificações em tempo real
+  </Card>
+  <Card title="Criar Pagamento" icon="credit-card" href="/api-reference/payments/create-payment">
+    Novo pagamento
+  </Card>
+</CardGroup>

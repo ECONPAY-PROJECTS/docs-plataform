@@ -1,0 +1,171 @@
+---
+title: "Autenticação"
+description: "Como autenticar suas requisições na API EconPay"
+---
+
+## Visão Geral
+
+A API EconPay usa dois níveis de autenticação:
+
+1. **Token JWT** - Para autenticar o usuário/sistema que faz a requisição
+2. **Access Token** - Para identificar o estabelecimento/empresa que processará o pagamento
+
+## Token JWT (Bearer Token)
+
+O Token JWT é obtido através do endpoint de login e deve ser incluído no header `Authorization` de todas as requisições.
+
+### Como Obter o Token
+
+```bash cURL
+curl --request POST \
+  --url https://api.econpay.com.br/auth \
+  --header 'Content-Type: application/json' \
+  --data '{
+    "email": "seu-email@exemplo.com",
+    "password": "sua-senha"
+  }'
+```
+
+### Resposta
+
+```json
+{
+  "response": {
+    "token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6MSwiaWF0IjoxNjQwMTIzNDU2LCJleHAiOjE2NDAxMjcwNTZ9.abc123...",
+    "user": {
+      "id": 1,
+      "name": "Seu Nome",
+      "email": "seu-email@exemplo.com",
+      "role": "admin"
+    }
+  }
+}
+```
+
+### Usando o Token
+
+Inclua o token no header `Authorization` com o prefixo `Bearer`:
+
+```bash
+Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
+```
+
+<Warning>
+  **Expiração:** O token JWT expira em **1 hora**. Após expirar, você precisará fazer login novamente.
+</Warning>
+
+## Access Token
+
+O `access_token` identifica o estabelecimento que processará o pagamento. Ele é configurado no dashboard e deve ser incluído no body das requisições de pagamento.
+
+### Onde Encontrar
+
+1. Acesse o [Dashboard EconPay](https://app.econpay.com.br)
+2. Vá em **Configurações** > **API**
+3. Copie seu `access_token`
+
+### Como Usar
+
+```json
+{
+  "access_token": "e959e19849384209adb791a232a8d3e767b5e7e3",
+  "customer": { ... },
+  "payment": { ... }
+}
+```
+
+<Info>
+  O `access_token` não expira, mas pode ser regenerado no dashboard se necessário.
+</Info>
+
+## Exemplo Completo
+
+```javascript JavaScript
+// 1. Fazer login e obter JWT
+const loginResponse = await fetch('https://api.econpay.com.br/auth', {
+  method: 'POST',
+  headers: { 'Content-Type': 'application/json' },
+  body: JSON.stringify({
+    email: 'seu-email@exemplo.com',
+    password: 'sua-senha'
+  })
+});
+
+const { response } = await loginResponse.json();
+const jwtToken = response.token;
+
+// 2. Usar JWT + Access Token para criar pagamento
+const paymentResponse = await fetch('https://api.econpay.com.br/payments/order', {
+  method: 'POST',
+  headers: {
+    'Authorization': `Bearer ${jwtToken}`,
+    'Content-Type': 'application/json'
+  },
+  body: JSON.stringify({
+    access_token: 'SEU_ACCESS_TOKEN_AQUI',
+    customer: { ... },
+    payment: { ... }
+  })
+});
+```
+
+## Segurança
+
+<AccordionGroup>
+  <Accordion title="Armazene tokens com segurança">
+    - Nunca exponha tokens em código frontend
+    - Use variáveis de ambiente
+    - Não commite tokens no Git
+    - Regenere tokens se houver suspeita de vazamento
+  </Accordion>
+  
+  <Accordion title="Renovação de Token JWT">
+    Como o JWT expira em 1 hora, implemente lógica de renovação:
+    
+    ```javascript
+    async function getValidToken() {
+      const token = localStorage.getItem('jwt_token');
+      const expiry = localStorage.getItem('jwt_expiry');
+      
+      if (!token || Date.now() > expiry) {
+        // Token expirado, fazer login novamente
+        const newToken = await login();
+        localStorage.setItem('jwt_token', newToken);
+        localStorage.setItem('jwt_expiry', Date.now() + 3600000); // 1 hora
+        return newToken;
+      }
+      
+      return token;
+    }
+    ```
+  </Accordion>
+  
+  <Accordion title="Ambientes Diferentes">
+    Use access_tokens diferentes para produção e sandbox:
+    
+    ```javascript
+    const ACCESS_TOKEN = process.env.NODE_ENV === 'production'
+      ? process.env.PROD_ACCESS_TOKEN
+      : process.env.SANDBOX_ACCESS_TOKEN;
+    ```
+  </Accordion>
+</AccordionGroup>
+
+## Códigos de Erro
+
+| Código | Descrição | Solução |
+|--------|-----------|---------|
+| 401 | Token JWT inválido ou expirado | Faça login novamente |
+| 403 | Access token inválido | Verifique o access_token no dashboard |
+| 403 | Permissões insuficientes | Verifique as permissões do usuário |
+
+## Próximos Passos
+
+<CardGroup cols={2}>
+  <Card title="Criar Pagamento" icon="credit-card" href="/api-reference/payments/create-payment">
+    Processe seu primeiro pagamento
+  </Card>
+  <Card title="Ambientes" icon="flask" href="/guides/environments">
+    Configure ambiente de testes
+  </Card>
+</CardGroup>

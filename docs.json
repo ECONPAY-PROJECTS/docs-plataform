@@ -1,68 +1,64 @@
 {
   "$schema": "https://mintlify.com/docs.json",
   "theme": "mint",
-  "name": "Mint Starter Kit",
+  "name": "EconPay API",
   "colors": {
-    "primary": "#16A34A",
-    "light": "#07C983",
-    "dark": "#15803D"
+    "primary": "#eb9b14",
+    "light": "#f0b03f",
+    "dark": "#c98510"
   },
   "favicon": "/favicon.svg",
   "navigation": {
     "tabs": [
       {
-        "tab": "Guides",
+        "tab": "Documentação",
         "groups": [
           {
-            "group": "Getting started",
+            "group": "Início",
             "pages": [
               "index",
               "quickstart",
-              "development"
+              "authentication"
             ]
           },
           {
-            "group": "Customization",
+            "group": "Guias",
             "pages": [
-              "essentials/settings",
-              "essentials/navigation"
-            ]
-          },
-          {
-            "group": "Writing content",
-            "pages": [
-              "essentials/markdown",
-              "essentials/code",
-              "essentials/images",
-              "essentials/reusable-snippets"
-            ]
-          },
-          {
-            "group": "AI tools",
-            "pages": [
-              "ai-tools/cursor",
-              "ai-tools/claude-code",
-              "ai-tools/windsurf"
+              "guides/environments",
+              "guides/errors",
+              "guides/webhooks"
             ]
           }
         ]
       },
       {
-        "tab": "API reference",
+        "tab": "API Reference",
         "groups": [
           {
-            "group": "API documentation",
+            "group": "Autenticação",
             "pages": [
-              "api-reference/introduction"
+              "api-reference/auth/login",
+              "api-reference/auth/profile"
             ]
           },
           {
-            "group": "Endpoint examples",
+            "group": "Pagamentos",
             "pages": [
-              "api-reference/endpoint/get",
-              "api-reference/endpoint/create",
-              "api-reference/endpoint/delete",
-              "api-reference/endpoint/webhook"
+              "api-reference/payments/create-payment",
+              "api-reference/payments/refund"
+            ]
+          },
+          {
+            "group": "Transações",
+            "pages": [
+              "api-reference/transactions/list",
+              "api-reference/transactions/details"
+            ]
+          },
+          {
+            "group": "Webhooks",
+            "pages": [
+              "api-reference/webhooks/overview"
             ]
           }
         ]
@@ -71,33 +67,40 @@
     "global": {
       "anchors": [
         {
-          "anchor": "Documentation",
-          "href": "https://mintlify.com/docs",
-          "icon": "book-open-cover"
+          "anchor": "Dashboard",
+          "href": "https://app.econpay.com.br",
+          "icon": "chart-line"
         },
         {
-          "anchor": "Blog",
-          "href": "https://mintlify.com/blog",
-          "icon": "newspaper"
+          "anchor": "Suporte",
+          "href": "mailto:suporte@econpay.com.br",
+          "icon": "headset"
         }
       ]
     }
   },
+  "api": {
+    "baseUrl": ["https://api.econpay.com.br", "https://sandbox-api.econpay.com.br"],
+    "auth": {
+      "method": "bearer"
+    }
+  },
   "logo": {
-    "light": "/logo/light.svg",
-    "dark": "/logo/dark.svg"
+    "light": "/logo/logo-econpay-large.svg",
+    "dark": "/logo/logo-econpay-large.svg",
+    "href": "https://econpay.com.br"
   },
   "navbar": {
     "links": [
       {
-        "label": "Support",
-        "href": "mailto:hi@mintlify.com"
+        "label": "Suporte",
+        "href": "mailto:suporte@econpay.com.br"
       }
     ],
     "primary": {
       "type": "button",
-      "label": "Dashboard",
-      "href": "https://dashboard.mintlify.com"
+      "label": "Acessar Dashboard",
+      "href": "https://app.econpay.com.br"
     }
   },
   "contextual": {
@@ -114,9 +117,8 @@
   },
   "footer": {
     "socials": {
-      "x": "https://x.com/mintlify",
-      "github": "https://github.com/mintlify",
-      "linkedin": "https://linkedin.com/company/mintlify"
+      "website": "https://econpay.com.br",
+      "linkedin": "https://linkedin.com/company/econpay"
     }
   }
 }

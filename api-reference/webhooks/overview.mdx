@@ -1,0 +1,178 @@
+---
+title: "Webhooks Overview"
+description: "Visão geral dos webhooks disponíveis"
+---
+
+## Eventos Disponíveis
+
+A EconPay envia webhooks para notificar sobre mudanças de status em tempo real. Configure sua URL no dashboard para receber notificações.
+
+<Card title="Guia Completo de Webhooks" icon="webhook" href="/guides/webhooks">
+  Veja o guia completo com exemplos de implementação
+</Card>
+
+## Eventos
+
+### payment.approved
+
+Enviado quando um pagamento é aprovado.
+
+```json
+{
+  "event": "payment.approved",
+  "transaction_id": 123,
+  "order_number": "ORD-20240122-123456",
+  "status": "APPROVED",
+  "amount": 10000,
+  "payment_type": "pix",
+  "customer": {
+    "name": "João da Silva",
+    "email": "joao@exemplo.com",
+    "document": "12345678900"
+  },
+  "paid_at": "2024-01-22T10:35:00Z",
+  "created_at": "2024-01-22T10:30:00Z"
+}
+```
+
+### payment.failed
+
+Enviado quando um pagamento falha ou é recusado.
+
+```json
+{
+  "event": "payment.failed",
+  "transaction_id": 124,
+  "order_number": "ORD-20240122-123457",
+  "status": "FAILED",
+  "amount": 15000,
+  "payment_type": "credit",
+  "failure_reason": "Cartão recusado pela operadora",
+  "customer": {
+    "name": "Maria Santos",
+    "email": "maria@exemplo.com",
+    "document": "98765432100"
+  },
+  "failed_at": "2024-01-22T11:00:00Z",
+  "created_at": "2024-01-22T10:59:00Z"
+}
+```
+
+### payment.refunded
+
+Enviado quando um reembolso é processado.
+
+```json
+{
+  "event": "payment.refunded",
+  "transaction_id": 123,
+  "order_number": "ORD-20240122-123456",
+  "status": "REFUNDED",
+  "amount": 10000,
+  "refund_amount": 10000,
+  "payment_type": "pix",
+  "refund_reason": "Solicitação do cliente",
+  "customer": {
+    "name": "João da Silva",
+    "email": "joao@exemplo.com",
+    "document": "12345678900"
+  },
+  "refunded_at": "2024-01-22T15:00:00Z",
+  "created_at": "2024-01-22T10:30:00Z"
+}
+```
+
+## Configuração
+
+1. Acesse o [Dashboard EconPay](https://app.econpay.com.br)
+2. Vá em **Configurações** > **Webhooks**
+3. Adicione sua URL (ex: `https://seusite.com.br/webhooks/econpay`)
+4. Salve
+
+## Implementação Básica
+
+```javascript Node.js/Express
+app.post('/webhooks/econpay', express.json(), (req, res) => {
+  const event = req.body;
+  
+  console.log('Webhook recebido:', event.event);
+  
+  switch (event.event) {
+    case 'payment.approved':
+      // Marcar pedido como pago
+      markOrderAsPaid(event.order_number);
+      break;
+      
+    case 'payment.failed':
+      // Notificar cliente sobre falha
+      notifyPaymentFailed(event.customer.email);
+      break;
+      
+    case 'payment.refunded':
+      // Processar estorno
+      processRefund(event.order_number);
+      break;
+  }
+  
+  // IMPORTANTE: Retornar 200 OK
+  res.status(200).json({ received: true });
+});
+```
+
+## Retry e Timeout
+
+- **Timeout:** 30 segundos
+- **Retries:** 3 tentativas
+- **Intervalo:** 1 minuto entre tentativas
+
+<Warning>
+  Seu endpoint deve responder com status 200 em menos de 30 segundos.
+</Warning>
+
+## Segurança
+
+Sempre valide que o webhook veio da EconPay:
+
+```javascript
+// Consultar API para confirmar
+const transaction = await fetch(
+  `https://api.econpay.com.br/transactions/${event.transaction_id}`,
+  {
+    headers: { 'Authorization': `Bearer ${token}` }
+  }
+).then(r => r.json());
+
+if (transaction.status !== event.status) {
+  console.warn('Status divergente no webhook');
+  return;
+}
+```
+
+## Testando
+
+Use ngrok para testar webhooks localmente:
+
+```bash
+# Expor porta 3000
+ngrok http 3000
+
+# Usar URL gerada no dashboard
+https://abc123.ngrok.io/webhooks/econpay
+```
+
+## Próximos Passos
+
+<CardGroup cols={2}>
+  <Card title="Guia Completo" icon="book" href="/guides/webhooks">
+    Implementação detalhada
+  </Card>
+  <Card title="Criar Pagamento" icon="credit-card" href="/api-reference/payments/create-payment">
+    Processar pagamentos
+  </Card>
+  <Card title="Listar Transações" icon="list" href="/api-reference/transactions/list">
+    Consultar histórico
+  </Card>
+  <Card title="Erros" icon="triangle-exclamation" href="/guides/errors">
+    Códigos de erro
+  </Card>
+</CardGroup>

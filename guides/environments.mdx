@@ -1,0 +1,220 @@
+---
+title: "Ambientes"
+description: "Entenda os ambientes de produção e sandbox"
+---
+
+## Visão Geral
+
+A EconPay oferece dois ambientes para você desenvolver e testar suas integrações:
+
+<CardGroup cols={2}>
+  <Card title="Produção" icon="check-circle">
+    Transações reais com dinheiro real
+  </Card>
+  <Card title="Sandbox" icon="flask">
+    Ambiente de testes sem transações reais
+  </Card>
+</CardGroup>
+
+## Ambiente de Produção
+
+Use o ambiente de produção quando sua integração estiver pronta e testada.
+
+### URL Base
+```
+https://api.econpay.com.br
+```
+
+### Características
+- ✅ Transações reais processadas
+- ✅ Dinheiro real movimentado
+- ✅ Webhooks enviados para URLs de produção
+- ✅ Taxas aplicadas normalmente
+
+### Quando Usar
+- Aplicação em produção
+- Transações de clientes reais
+- Após testes completos em sandbox
+
+## Ambiente Sandbox
+
+Use o sandbox para desenvolver e testar sua integração sem processar transações reais.
+
+### URL Base
+```
+https://sandbox-api.econpay.com.br
+```
+
+### Características
+- ✅ Sem transações reais
+- ✅ Sem movimentação de dinheiro
+- ✅ Dados de teste
+- ✅ Webhooks enviados normalmente
+- ❌ Sem taxas aplicadas
+
+### Quando Usar
+- Desenvolvimento inicial
+- Testes de integração
+- Validação de fluxos
+- Testes de webhooks
+
+<Warning>
+  **Importante:** Nunca use credenciais de produção em sandbox e vice-versa.
+</Warning>
+
+## Credenciais por Ambiente
+
+Você precisa de credenciais diferentes para cada ambiente:
+
+<Tabs>
+  <Tab title="Produção">
+    ```javascript
+    const API_URL = 'https://api.econpay.com.br';
+    const ACCESS_TOKEN = 'seu_token_producao';
+    ```
+    
+    Obtenha em: [Dashboard Produção](https://app.econpay.com.br)
+  </Tab>
+  
+  <Tab title="Sandbox">
+    ```javascript
+    const API_URL = 'https://sandbox-api.econpay.com.br';
+    const ACCESS_TOKEN = 'seu_token_sandbox';
+    ```
+    
+    Obtenha em: [Dashboard Sandbox](https://sandbox.econpay.com.br)
+  </Tab>
+</Tabs>
+
+## Configuração Recomendada
+
+Use variáveis de ambiente para alternar facilmente entre ambientes:
+
+```javascript .env.production
+API_URL=https://api.econpay.com.br
+ACCESS_TOKEN=seu_token_producao
+JWT_EMAIL=email@producao.com
+JWT_PASSWORD=senha_producao
+```
+
+```javascript .env.development
+API_URL=https://sandbox-api.econpay.com.br
+ACCESS_TOKEN=seu_token_sandbox
+JWT_EMAIL=email@sandbox.com
+JWT_PASSWORD=senha_sandbox
+```
+
+```javascript config.js
+const config = {
+  apiUrl: process.env.API_URL,
+  accessToken: process.env.ACCESS_TOKEN,
+  jwtEmail: process.env.JWT_EMAIL,
+  jwtPassword: process.env.JWT_PASSWORD
+};
+
+export default config;
+```
+
+## Dados de Teste (Sandbox)
+
+### Cartões de Teste
+
+Use estes cartões para simular diferentes cenários em sandbox:
+
+| Número | Bandeira | Resultado |
+|--------|----------|-----------|
+| 4000000000000010 | Visa | Aprovado |
+| 5555555555554444 | Mastercard | Aprovado |
+| 4000000000000002 | Visa | Negado |
+| 4000000000000069 | Visa | Expirado |
+
+### CVV e Validade
+- **CVV:** Qualquer 3 dígitos (ex: 123)
+- **Validade:** Qualquer data futura (ex: 12/2025)
+
+### CPF/CNPJ de Teste
+- **CPF:** 12345678900
+- **CNPJ:** 12345678000190
+
+### PIX em Sandbox
+- QR Codes são gerados normalmente
+- Pagamentos são aprovados automaticamente após 30 segundos
+- Ou use o endpoint de simulação para aprovar instantaneamente
+
+## Testando Webhooks
+
+Em sandbox, webhooks são enviados normalmente. Use ferramentas como:
+
+<CardGroup cols={2}>
+  <Card title="ngrok" icon="globe" href="https://ngrok.com">
+    Exponha localhost para receber webhooks
+  </Card>
+  <Card title="webhook.site" icon="browser" href="https://webhook.site">
+    Inspecione payloads de webhook
+  </Card>
+</CardGroup>
+
+### Exemplo com ngrok
+
+```bash
+# 1. Instale o ngrok
+npm install -g ngrok
+
+# 2. Exponha sua porta local
+ngrok http 3000
+
+# 3. Use a URL gerada no dashboard
+https://abc123.ngrok.io/webhooks
+```
+
+## Migração para Produção
+
+Quando estiver pronto para produção:
+
+<Steps>
+  <Step title="Teste completamente em sandbox">
+    Valide todos os fluxos: pagamentos, reembolsos, webhooks
+  </Step>
+  
+  <Step title="Obtenha credenciais de produção">
+    Acesse o dashboard de produção e gere seu access_token
+  </Step>
+  
+  <Step title="Atualize variáveis de ambiente">
+    Troque URLs e tokens para produção
+  </Step>
+  
+  <Step title="Configure webhooks de produção">
+    Use URLs de produção (não localhost ou ngrok)
+  </Step>
+  
+  <Step title="Faça um pagamento de teste real">
+    Processe uma transação pequena para validar
+  </Step>
+  
+  <Step title="Monitore os primeiros pagamentos">
+    Acompanhe de perto as primeiras transações
+  </Step>
+</Steps>
+
+## Diferenças entre Ambientes
+
+| Recurso | Produção | Sandbox |
+|---------|----------|---------|
+| Transações reais | ✅ Sim | ❌ Não |
+| Taxas cobradas | ✅ Sim | ❌ Não |
+| Webhooks | ✅ Sim | ✅ Sim |
+| Dados de teste | ❌ Não | ✅ Sim |
+| Aprovação automática | ❌ Não | ✅ Sim (PIX) |
+| Limite de requisições | Normal | Ilimitado |
+
+## Próximos Passos
+
+<CardGroup cols={2}>
+  <Card title="Criar Pagamento" icon="credit-card" href="/api-reference/payments/create-payment">
+    Teste seu primeiro pagamento
+  </Card>
+  <Card title="Webhooks" icon="webhook" href="/guides/webhooks">
+    Configure notificações
+  </Card>
+</CardGroup>

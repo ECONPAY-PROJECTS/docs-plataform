@@ -1,0 +1,210 @@
+---
+title: "POST /auth"
+api: "POST https://api.econpay.com.br/auth"
+description: "Autenticar e obter token JWT"
+---
+
+## Descrição
+
+Endpoint para autenticação de usuários. Retorna um token JWT que deve ser usado no header `Authorization` de todas as requisições subsequentes.
+
+<Note>
+  O token JWT expira em **1 hora**. Após expirar, você precisará fazer login novamente.
+</Note>
+
+## Request Body
+
+<ParamField body="email" type="string" required>
+  Email do usuário cadastrado
+</ParamField>
+
+<ParamField body="password" type="string" required>
+  Senha do usuário
+</ParamField>
+
+## Response
+
+<ResponseField name="response" type="object">
+  <Expandable title="properties">
+    <ResponseField name="token" type="string">
+      Token JWT para autenticação (válido por 1 hora)
+    </ResponseField>
+    
+    <ResponseField name="user" type="object">
+      <Expandable title="properties">
+        <ResponseField name="id" type="number">
+          ID do usuário
+        </ResponseField>
+        
+        <ResponseField name="name" type="string">
+          Nome do usuário
+        </ResponseField>
+        
+        <ResponseField name="email" type="string">
+          Email do usuário
+        </ResponseField>
+        
+        <ResponseField name="role" type="string">
+          Papel do usuário (admin, app, client)
+        </ResponseField>
+      </Expandable>
+    </ResponseField>
+  </Expandable>
+</ResponseField>
+
+<RequestExample>
+
+```bash cURL
+curl --request POST \
+  --url https://api.econpay.com.br/auth \
+  --header 'Content-Type: application/json' \
+  --data '{
+    "email": "seu-email@exemplo.com",
+    "password": "sua-senha"
+  }'
+```
+
+```javascript JavaScript
+const response = await fetch('https://api.econpay.com.br/auth', {
+  method: 'POST',
+  headers: {
+    'Content-Type': 'application/json',
+  },
+  body: JSON.stringify({
+    email: 'seu-email@exemplo.com',
+    password: 'sua-senha'
+  })
+});
+
+const data = await response.json();
+const token = data.response.token;
+
+// Usar token em requisições futuras
+const paymentResponse = await fetch('https://api.econpay.com.br/payments/order', {
+  headers: {
+    'Authorization': `Bearer ${token}`,
+    'Content-Type': 'application/json'
+  },
+  // ...
+});
+```
+
+```python Python
+import requests
+
+response = requests.post(
+    'https://api.econpay.com.br/auth',
+    json={
+        'email': 'seu-email@exemplo.com',
+        'password': 'sua-senha'
+    }
+)
+
+data = response.json()
+token = data['response']['token']
+
+# Usar token em requisições futuras
+payment_response = requests.post(
+    'https://api.econpay.com.br/payments/order',
+    headers={
+        'Authorization': f'Bearer {token}',
+        'Content-Type': 'application/json'
+    },
+    # ...
+)
+```
+
+```php PHP
+<?php
+$ch = curl_init('https://api.econpay.com.br/auth');
+
+curl_setopt($ch, CURLOPT_POST, true);
+curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+curl_setopt($ch, CURLOPT_HTTPHEADER, ['Content-Type: application/json']);
+curl_setopt($ch, CURLOPT_POSTFIELDS, json_encode([
+    'email' => 'seu-email@exemplo.com',
+    'password' => 'sua-senha'
+]));
+
+$response = curl_exec($ch);
+$data = json_decode($response, true);
+$token = $data['response']['token'];
+
+curl_close($ch);
+
+// Usar token em requisições futuras
+$ch = curl_init('https://api.econpay.com.br/payments/order');
+curl_setopt($ch, CURLOPT_HTTPHEADER, [
+    'Authorization: Bearer ' . $token,
+    'Content-Type: application/json'
+]);
+// ...
+?>
+```
+
+</RequestExample>
+
+<ResponseExample>
+
+```json 200 - Success
+{
+  "response": {
+    "token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6MSwiaWF0IjoxNjQwMTIzNDU2LCJleHAiOjE2NDAxMjcwNTZ9.abc123def456...",
+    "user": {
+      "id": 1,
+      "name": "João da Silva",
+      "email": "joao@exemplo.com",
+      "role": "admin"
+    }
+  }
+}
+```
+
+```json 401 - Unauthorized
+{
+  "statusCode": 401,
+  "message": "Email ou senha inválidos"
+}
+```
+
+</ResponseExample>
+
+## Usando o Token
+
+Após obter o token, inclua-o no header `Authorization` de todas as requisições:
+
+```
+Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
+```
+
+## Renovação de Token
+
+O token expira em 1 hora. Implemente lógica para renovar automaticamente:
+
+```javascript
+let token = null;
+let tokenExpiry = null;
+
+async function getValidToken() {
+  // Se não tem token ou expirou, fazer login
+  if (!token || Date.now() > tokenExpiry) {
+    const response = await fetch('https://api.econpay.com.br/auth', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        email: process.env.EMAIL,
+        password: process.env.PASSWORD
+      })
+    });
+    
+    const data = await response.json();
+    token = data.response.token;
+    tokenExpiry = Date.now() + (3600 * 1000); // 1 hora
+  }
+  
+  return token;
+}
+
+// Usar em requisições
+const validToken = await getValidToken();
+```

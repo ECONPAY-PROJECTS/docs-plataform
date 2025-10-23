@@ -1,97 +1,124 @@
 ---
-title: "Introduction"
-description: "Welcome to the new home for your documentation"
+title: "Bem-vindo à EconPay API"
+description: "Documentação completa para integração com a plataforma de pagamentos EconPay"
 ---
 
-## Setting up
+## Introdução
 
-Get your documentation site up and running in minutes.
+A EconPay é uma plataforma completa de pagamentos que permite processar transações via **PIX**, **Cartão de Crédito**, **Cartão de Débito** e **Boleto Bancário**. Nossa API foi desenvolvida para ser simples, segura e escalável.
 
 <Card
-  title="Start here"
+  title="Guia de Início Rápido"
   icon="rocket"
   href="/quickstart"
   horizontal
 >
-  Follow our three step quickstart guide.
+  Comece a processar pagamentos em minutos
 </Card>
 
-## Make it yours
+## Principais Funcionalidades
 
-Design a docs site that looks great and empowers your users.
-
-<Columns cols={2}>
+<CardGroup cols={2}>
   <Card
-    title="Edit locally"
-    icon="pen-to-square"
-    href="/development"
+    title="Múltiplos Métodos de Pagamento"
+    icon="credit-card"
   >
-    Edit your docs locally and preview them in real time.
+    PIX, Cartão de Crédito, Débito e Boleto em uma única API
   </Card>
   <Card
-    title="Customize your site"
-    icon="palette"
-    href="/essentials/settings"
+    title="Webhooks em Tempo Real"
+    icon="webhook"
+    href="/guides/webhooks"
   >
-    Customize the design and colors of your site to match your brand.
-  </Card>
-    <Card
-    title="Set up navigation"
-    icon="map"
-    href="/essentials/navigation"
-  >
-    Organize your docs to help users find what they need and succeed with your product.
+    Receba notificações instantâneas sobre mudanças de status
   </Card>
   <Card
-    title="API documentation"
-    icon="terminal"
-    href="/api-reference/introduction"
+    title="Ambiente de Testes"
+    icon="flask"
+    href="/guides/environments"
   >
-    Auto-generate API documentation from OpenAPI specifications.
-  </Card>
-</Columns>
-
-## Create beautiful pages
-
-Everything you need to create world-class documentation.
-
-<Columns cols={2}>
-  <Card
-    title="Write with MDX"
-    icon="pen-fancy"
-    href="/essentials/markdown"
-  >
-    Use MDX to style your docs pages.
+    Teste suas integrações em ambiente sandbox seguro
   </Card>
   <Card
-    title="Code samples"
-    icon="code"
-    href="/essentials/code"
+    title="Reembolsos Automáticos"
+    icon="rotate-left"
+    href="/api-reference/payments/refund"
   >
-    Add sample code to demonstrate how to use your product.
+    Processe estornos e cancelamentos facilmente
+  </Card>
+</CardGroup>
+
+## Métodos de Pagamento Suportados
+
+<Tabs>
+  <Tab title="PIX">
+    Pagamentos instantâneos 24/7 com QR Code dinâmico. Aprovação em segundos.
+    
+    - ✅ Disponível 24/7
+    - ✅ Aprovação instantânea
+    - ✅ Sem taxas para o cliente final
+    - ✅ QR Code com validade configurável
+  </Tab>
+  
+  <Tab title="Cartão de Crédito">
+    Aceite cartões de crédito das principais bandeiras com parcelamento.
+    
+    - ✅ Visa, Mastercard, Elo, Amex
+    - ✅ Parcelamento em até 12x
+    - ✅ Tokenização segura
+    - ✅ Antifraude integrado
+  </Tab>
+  
+  <Tab title="Cartão de Débito">
+    Pagamentos à vista com cartão de débito.
+    
+    - ✅ Aprovação rápida
+    - ✅ Menor taxa de processamento
+    - ✅ Segurança PCI-DSS
+  </Tab>
+  
+  <Tab title="Boleto Bancário">
+    Boletos registrados com vencimento configurável.
+    
+    - ✅ Registro automático
+    - ✅ Código de barras e linha digitável
+    - ✅ Vencimento personalizável
+    - ✅ Notificação de pagamento
+  </Tab>
+</Tabs>
+
+## Comece Agora
+
+<Steps>
+  <Step title="Crie sua conta">
+    Acesse o [Dashboard EconPay](https://app.econpay.com.br) e crie sua conta gratuitamente
+  </Step>
+  <Step title="Obtenha suas credenciais">
+    Gere seu `access_token` no painel de configurações
+  </Step>
+  <Step title="Faça sua primeira requisição">
+    Siga nosso [guia de início rápido](/quickstart) para processar seu primeiro pagamento
+  </Step>
+  <Step title="Configure webhooks">
+    Configure [webhooks](/guides/webhooks) para receber notificações em tempo real
+  </Step>
+</Steps>
+
+## Precisa de Ajuda?
+
+<CardGroup cols={2}>
+  <Card
+    title="Documentação da API"
+    icon="book"
+    href="/api-reference/auth/login"
+  >
+    Explore todos os endpoints disponíveis
   </Card>
   <Card
-    title="Images"
-    icon="image"
-    href="/essentials/images"
+    title="Suporte Técnico"
+    icon="headset"
+    href="mailto:suporte@econpay.com.br"
   >
-    Display images and other media.
+    Entre em contato com nossa equipe
   </Card>
-  <Card
-    title="Reusable snippets"
-    icon="recycle"
-    href="/essentials/reusable-snippets"
-  >
-    Write once and reuse across your docs.
-  </Card>
-</Columns>
-
-## Need inspiration?
-
-<Card
-  title="See complete examples"
-  icon="stars"
-  href="https://mintlify.com/customers"
->
-  Browse our showcase of exceptional documentation sites.
-</Card>
+</CardGroup>
