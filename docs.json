@@ -25,6 +25,7 @@
             "group": "Guias",
             "pages": [
               "guides/environments",
+              "guides/split-payments",
               "guides/errors",
               "guides/webhooks"
             ]
@@ -56,9 +57,22 @@
             ]
           },
           {
+            "group": "Clientes",
+            "pages": [
+              "api-reference/customers/list"
+            ]
+          },
+          {
+            "group": "Saldos",
+            "pages": [
+              "api-reference/balance/get-balance"
+            ]
+          },
+          {
             "group": "Webhooks",
             "pages": [
-              "api-reference/webhooks/overview"
+              "api-reference/webhooks/overview",
+              "api-reference/webhooks/manage"
             ]
           }
         ]
@@ -80,7 +94,10 @@
     }
   },
   "api": {
-    "baseUrl": ["https://api.econpay.com.br", "https://sandbox-api.econpay.com.br"],
+    "baseUrl": [
+      "https://api.econpay.com.br",
+      "https://sandbox-api.econpay.com.br"
+    ],
     "auth": {
       "method": "bearer"
     }
@@ -105,15 +122,15 @@
   },
   "contextual": {
     "options": [
-     "copy",
-     "view",
-     "chatgpt",
-     "claude",
-     "perplexity",
-     "mcp",
-     "cursor",
-     "vscode"
-   ]
+      "copy",
+      "view",
+      "chatgpt",
+      "claude",
+      "perplexity",
+      "mcp",
+      "cursor",
+      "vscode"
+    ]
   },
   "footer": {
     "socials": {

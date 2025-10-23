@@ -1,0 +1,152 @@
+---
+title: "POST /balance/list"
+api: "POST https://api.econpay.com.br/balance/list"
+auth: "bearer"
+description: "Consultar saldos de estabelecimentos"
+---
+
+## Descrição
+
+Retorna os saldos disponíveis, futuros e retidos dos estabelecimentos especificados.
+
+## Headers
+
+<ParamField header="Authorization" type="string" required>
+  Bearer token JWT obtido no login
+</ParamField>
+
+## Request Body
+
+<ParamField body="companyIds" type="array" required>
+  Array de IDs dos estabelecimentos para consultar saldos
+</ParamField>
+
+## Response
+
+<ResponseField name="available" type="number">
+  Saldo disponível para saque (em centavos)
+</ResponseField>
+
+<ResponseField name="future" type="number">
+  Saldo futuro a receber (em centavos)
+</ResponseField>
+
+<ResponseField name="retention" type="number">
+  Saldo retido (em centavos)
+</ResponseField>
+
+<RequestExample>
+
+```bash cURL
+curl --request POST \
+  --url https://api.econpay.com.br/balance/list \
+  --header 'Authorization: Bearer SEU_TOKEN_JWT' \
+  --header 'Content-Type: application/json' \
+  --data '{
+    "companyIds": [1, 2, 3]
+  }'
+```
+
+```javascript JavaScript
+const response = await fetch('https://api.econpay.com.br/balance/list', {
+  method: 'POST',
+  headers: {
+    'Authorization': `Bearer ${token}`,
+    'Content-Type': 'application/json'
+  },
+  body: JSON.stringify({
+    companyIds: [1, 2, 3]
+  })
+});
+
+const balances = await response.json();
+console.log(`Saldo disponível: R$ ${balances.available / 100}`);
+console.log(`Saldo futuro: R$ ${balances.future / 100}`);
+console.log(`Saldo retido: R$ ${balances.retention / 100}`);
+```
+
+```python Python
+import requests
+
+response = requests.post(
+    'https://api.econpay.com.br/balance/list',
+    headers={
+        'Authorization': f'Bearer {token}',
+        'Content-Type': 'application/json'
+    },
+    json={
+        'companyIds': [1, 2, 3]
+    }
+)
+
+balances = response.json()
+print(f"Saldo disponível: R$ {balances['available'] / 100:.2f}")
+print(f"Saldo futuro: R$ {balances['future'] / 100:.2f}")
+print(f"Saldo retido: R$ {balances['retention'] / 100:.2f}")
+```
+
+</RequestExample>
+
+<ResponseExample>
+
+```json 200 - Success
+{
+  "available": 150000,
+  "future": 250000,
+  "retention": 50000
+}
+```
+
+</ResponseExample>
+
+## Tipos de Saldo
+
+### Saldo Disponível
+Valor que pode ser sacado imediatamente. Inclui transações já liquidadas e liberadas.
+
+### Saldo Futuro
+Valor a receber de transações aprovadas mas ainda não liquidadas (aguardando prazo de liquidação).
+
+### Saldo Retido
+Valor retido conforme configuração de retenção do estabelecimento (garantia, reserva técnica, etc).
+
+## Exemplo Completo
+
+```javascript
+async function checkBalance(companyIds) {
+  const response = await fetch('https://api.econpay.com.br/balance/list', {
+    method: 'POST',
+    headers: {
+      'Authorization': `Bearer ${token}`,
+      'Content-Type': 'application/json'
+    },
+    body: JSON.stringify({ companyIds })
+  });
+  
+  const balances = await response.json();
+  
+  return {
+    available: balances.available / 100,
+    future: balances.future / 100,
+    retention: balances.retention / 100,
+    total: (balances.available + balances.future) / 100
+  };
+}
+
+const balance = await checkBalance([1]);
+console.log(`Disponível: R$ ${balance.available.toFixed(2)}`);
+console.log(`A receber: R$ ${balance.future.toFixed(2)}`);
+console.log(`Retido: R$ ${balance.retention.toFixed(2)}`);
+console.log(`Total: R$ ${balance.total.toFixed(2)}`);
+```
+
+## Próximos Passos
+
+<CardGroup cols={2}>
+  <Card title="Listar Transações" icon="list" href="/api-reference/transactions/list">
+    Ver transações que compõem o saldo
+  </Card>
+  <Card title="Criar Pagamento" icon="credit-card" href="/api-reference/payments/create-payment">
+    Processar novo pagamento
+  </Card>
+</CardGroup>

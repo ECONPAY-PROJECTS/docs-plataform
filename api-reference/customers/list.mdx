@@ -1,0 +1,279 @@
+---
+title: "GET /customers"
+api: "GET https://api.econpay.com.br/customers"
+auth: "bearer"
+description: "Listar clientes com paginação e filtros"
+---
+
+## Descrição
+
+Retorna uma lista paginada de clientes cadastrados. Útil para consultar histórico de clientes, gerar relatórios e buscar informações.
+
+## Headers
+
+<ParamField header="Authorization" type="string" required>
+  Bearer token JWT obtido no login
+</ParamField>
+
+## Query Parameters
+
+<ParamField query="page" type="number" default="1">
+  Número da página
+</ParamField>
+
+<ParamField query="limit" type="number" default="10">
+  Itens por página (máximo: 100)
+</ParamField>
+
+<ParamField query="orderBy" type="string" default="created_at">
+  Campo para ordenação
+</ParamField>
+
+<ParamField query="direction" type="string" default="DESC">
+  Direção da ordenação: `ASC` ou `DESC`
+</ParamField>
+
+<ParamField query="name" type="string">
+  Filtrar por nome do cliente
+</ParamField>
+
+<ParamField query="document" type="string">
+  Filtrar por CPF/CNPJ do cliente
+</ParamField>
+
+## Response
+
+<ResponseField name="data" type="array">
+  Lista de clientes
+  <Expandable title="properties">
+    <ResponseField name="id" type="number">
+      ID do cliente
+    </ResponseField>
+    
+    <ResponseField name="name" type="string">
+      Nome completo do cliente
+    </ResponseField>
+    
+    <ResponseField name="email" type="string">
+      Email do cliente
+    </ResponseField>
+    
+    <ResponseField name="document" type="string">
+      CPF ou CNPJ
+    </ResponseField>
+    
+    <ResponseField name="phone" type="string">
+      Telefone do cliente
+    </ResponseField>
+    
+    <ResponseField name="created_at" type="string">
+      Data de cadastro
+    </ResponseField>
+  </Expandable>
+</ResponseField>
+
+<ResponseField name="total" type="number">
+  Total de registros
+</ResponseField>
+
+<ResponseField name="page" type="number">
+  Página atual
+</ResponseField>
+
+<ResponseField name="lastPage" type="number">
+  Última página
+</ResponseField>
+
+<RequestExample>
+
+```bash Listar Todos
+curl --request GET \
+  --url 'https://api.econpay.com.br/customers?page=1&limit=20' \
+  --header 'Authorization: Bearer SEU_TOKEN_JWT'
+```
+
+```bash Filtrar por Nome
+curl --request GET \
+  --url 'https://api.econpay.com.br/customers?name=João' \
+  --header 'Authorization: Bearer SEU_TOKEN_JWT'
+```
+
+```bash Filtrar por CPF
+curl --request GET \
+  --url 'https://api.econpay.com.br/customers?document=12345678900' \
+  --header 'Authorization: Bearer SEU_TOKEN_JWT'
+```
+
+```javascript JavaScript
+const response = await fetch(
+  'https://api.econpay.com.br/customers?page=1&limit=20',
+  {
+    headers: { 'Authorization': `Bearer ${token}` }
+  }
+);
+
+const { data, total, page, lastPage } = await response.json();
+
+console.log(`Mostrando ${data.length} de ${total} clientes`);
+data.forEach(customer => {
+  console.log(`${customer.name} - ${customer.email}`);
+});
+```
+
+```python Python
+import requests
+
+response = requests.get(
+    'https://api.econpay.com.br/customers',
+    headers={'Authorization': f'Bearer {token}'},
+    params={
+        'page': 1,
+        'limit': 20,
+        'name': 'João'
+    }
+)
+
+data = response.json()
+print(f"Total: {data['total']} clientes")
+for customer in data['data']:
+    print(f"{customer['name']} - {customer['document']}")
+```
+
+```php PHP
+<?php
+$params = http_build_query([
+    'page' => 1,
+    'limit' => 20
+]);
+
+$ch = curl_init("https://api.econpay.com.br/customers?{$params}");
+curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+curl_setopt($ch, CURLOPT_HTTPHEADER, [
+    'Authorization: Bearer ' . $token
+]);
+
+$response = curl_exec($ch);
+$data = json_decode($response, true);
+
+echo "Total: {$data['total']} clientes\n";
+foreach ($data['data'] as $customer) {
+    echo "{$customer['name']} - {$customer['email']}\n";
+}
+
+curl_close($ch);
+?>
+```
+
+</RequestExample>
+
+<ResponseExample>
+
+```json 200 - Success
+{
+  "data": [
+    {
+      "id": 1,
+      "name": "João da Silva",
+      "email": "joao@exemplo.com",
+      "document": "12345678900",
+      "phone": "+55 11 999999999",
+      "created_at": "2024-01-15T10:30:00Z"
+    },
+    {
+      "id": 2,
+      "name": "Maria Santos",
+      "email": "maria@exemplo.com",
+      "document": "98765432100",
+      "phone": "+55 11 988888888",
+      "created_at": "2024-01-16T14:20:00Z"
+    }
+  ],
+  "total": 150,
+  "page": 1,
+  "lastPage": 8
+}
+```
+
+</ResponseExample>
+
+## Exemplos de Uso
+
+### Buscar Cliente por Nome
+
+```javascript
+async function findCustomerByName(name) {
+  const response = await fetch(
+    `https://api.econpay.com.br/customers?name=${encodeURIComponent(name)}`,
+    {
+      headers: { 'Authorization': `Bearer ${token}` }
+    }
+  );
+  
+  const { data } = await response.json();
+  return data;
+}
+
+const customers = await findCustomerByName('João');
+console.log(`Encontrados ${customers.length} clientes`);
+```
+
+### Buscar Cliente por CPF
+
+```javascript
+async function findCustomerByDocument(document) {
+  const response = await fetch(
+    `https://api.econpay.com.br/customers?document=${document}`,
+    {
+      headers: { 'Authorization': `Bearer ${token}` }
+    }
+  );
+  
+  const { data } = await response.json();
+  return data[0]; // Retorna o primeiro (CPF é único)
+}
+
+const customer = await findCustomerByDocument('12345678900');
+if (customer) {
+  console.log(`Cliente encontrado: ${customer.name}`);
+}
+```
+
+### Listar Todos os Clientes (Paginação)
+
+```javascript
+async function getAllCustomers() {
+  const allCustomers = [];
+  let page = 1;
+  let hasMore = true;
+  
+  while (hasMore) {
+    const response = await fetch(
+      `https://api.econpay.com.br/customers?page=${page}&limit=100`,
+      {
+        headers: { 'Authorization': `Bearer ${token}` }
+      }
+    );
+    
+    const { data, lastPage } = await response.json();
+    allCustomers.push(...data);
+    hasMore = page < lastPage;
+    page++;
+  }
+  
+  return allCustomers;
+}
+
+const customers = await getAllCustomers();
+console.log(`Total de clientes: ${customers.length}`);
+```
+
+## Próximos Passos
+
+<CardGroup cols={2}>
+  <Card title="Criar Pagamento" icon="credit-card" href="/api-reference/payments/create-payment">
+    Processar pagamento para cliente
+  </Card>
+  <Card title="Listar Transações" icon="list" href="/api-reference/transactions/list">
+    Ver transações do cliente
+  </Card>
+</CardGroup>
