@@ -2,15 +2,13 @@
 title: "POST /payments/order"
 api: "POST https://api.econpay.com.br/payments/order"
 auth: "bearer"
-description: "Criar um novo pagamento (PIX, Cartão de Crédito, Débito ou Boleto)"
+description: "Criar um novo pagamento (PIX ou Boleto)"
 ---
 
 ## Descrição
 
-Endpoint unificado para processar pagamentos. Suporta múltiplos métodos de pagamento:
+Endpoint unificado para processar pagamentos. Suporta os seguintes métodos de pagamento:
 - **PIX** - Pagamento instantâneo com QR Code
-- **Cartão de Crédito** - Parcelamento em até 12x
-- **Cartão de Débito** - Pagamento à vista
 - **Boleto** - Boleto bancário registrado
 
 <Warning>
@@ -123,36 +121,11 @@ Endpoint unificado para processar pagamentos. Suporta múltiplos métodos de pag
   Dados do pagamento
   <Expandable title="properties">
     <ParamField body="payment.type" type="string" required>
-      Tipo de pagamento: `pix`, `credit`, `debit`, `invoice`
+      Tipo de pagamento: `pix` ou `invoice`
     </ParamField>
     
     <ParamField body="payment.installments" type="number" required>
-      Número de parcelas (1 para à vista, até 12 para crédito)
-    </ParamField>
-    
-    <ParamField body="payment.credit_card" type="object">
-      Dados do cartão (obrigatório para `credit` e `debit`)
-      <Expandable title="properties">
-        <ParamField body="payment.credit_card.number" type="string" required>
-          Número do cartão (apenas números)
-        </ParamField>
-        
-        <ParamField body="payment.credit_card.holder_name" type="string" required>
-          Nome impresso no cartão (MAIÚSCULAS)
-        </ParamField>
-        
-        <ParamField body="payment.credit_card.exp_month" type="number" required>
-          Mês de expiração (1-12)
-        </ParamField>
-        
-        <ParamField body="payment.credit_card.exp_year" type="number" required>
-          Ano de expiração (YYYY, ex: 2025)
-        </ParamField>
-        
-        <ParamField body="payment.credit_card.cvv" type="string" required>
-          Código de segurança (3 ou 4 dígitos)
-        </ParamField>
-      </Expandable>
+      Número de parcelas (sempre 1 para PIX e Boleto)
     </ParamField>
   </Expandable>
 </ParamField>
@@ -294,7 +267,7 @@ curl --request POST \
   }'
 ```
 
-```bash Cartão de Crédito
+```bash Boleto
 curl --request POST \
   --url https://api.econpay.com.br/payments/order \
   --header 'Authorization: Bearer SEU_TOKEN_JWT' \
@@ -317,15 +290,8 @@ curl --request POST \
       "price": 30000
     }],
     "payment": {
-      "type": "credit",
-      "installments": 3,
-      "credit_card": {
-        "number": "4000000000000010",
-        "holder_name": "MARIA SANTOS",
-        "exp_month": 12,
-        "exp_year": 2025,
-        "cvv": "123"
-      }
+      "type": "invoice",
+      "installments": 1
     },
     "shipping": {
       "name": "Sedex",
@@ -453,16 +419,17 @@ if payment['success']:
 }
 ```
 
-```json 200 - Cartão Success
+```json 200 - Boleto Success
 {
   "success": true,
   "transaction": {
     "id": 124,
     "order_number": "ORD-20240122-123457",
-    "status": "APPROVED",
+    "status": "PENDING",
     "amount": 31500,
-    "payment_type": "credit",
-    "installments": 3,
+    "payment_type": "invoice",
+    "boleto_url": "https://api.econpay.com.br/boleto/124.pdf",
+    "boleto_barcode": "34191.79001 01043.510047 91020.150008 1 82880000030000",
     "created_at": "2024-01-22T10:35:00Z"
   }
 }
@@ -512,40 +479,6 @@ if payment['success']:
     **Status:**
     - `PENDING`: Aguardando pagamento
     - `APPROVED`: Pago (webhook enviado)
-  </Tab>
-  
-  <Tab title="Cartão de Crédito">
-    ### Cartão de Crédito
-    
-    - Parcelamento em até 12x
-    - Aprovação em segundos
-    - Antifraude integrado
-    - Bandeiras: Visa, Mastercard, Elo, Amex
-    
-    **Campos obrigatórios:**
-    - `payment.credit_card.number`
-    - `payment.credit_card.holder_name`
-    - `payment.credit_card.exp_month` (1-12)
-    - `payment.credit_card.exp_year` (YYYY)
-    - `payment.credit_card.cvv`
-    
-    **Status:**
-    - `APPROVED`: Aprovado imediatamente
-    - `FAILED`: Recusado (webhook enviado)
-  </Tab>
-  
-  <Tab title="Cartão de Débito">
-    ### Cartão de Débito
-    
-    - Apenas à vista (installments: 1)
-    - Aprovação rápida
-    - Menor taxa de processamento
-    
-    **Mesmos campos do crédito**
-    
-    **Status:**
-    - `APPROVED`: Aprovado imediatamente
-    - `FAILED`: Recusado
   </Tab>
   
   <Tab title="Boleto">
