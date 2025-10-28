@@ -1,0 +1,301 @@
+---
+title: "Guia de Consulta de Transações"
+description: "Como consultar e sincronizar transações no EconPay"
+---
+
+## Visão Geral
+
+O EconPay oferece duas formas de consultar transações:
+
+1. **Consulta Local** - Retorna dados do banco de dados (rápido, mas pode estar desatualizado)
+2. **Consulta com Sincronização** - Consulta na Firebank e sincroniza automaticamente (recomendado)
+
+## 🔍 Consulta Local (Sem Sincronização)
+
+Retorna apenas os dados armazenados no banco de dados local.
+
+```bash
+GET /transactions/{id}
+```
+
+**Exemplo:**
+```bash
+curl --request GET \
+  --url https://api.econpay.com.br/transactions/225 \
+  --header 'Authorization: Bearer SEU_TOKEN'
+```
+
+**Resposta:**
+```json
+{
+  "id": 225,
+  "status": 1,
+  "status_payment_name": "PENDING",  // Nome legível
+  "amount": 500,
+  "type": "pix",
+  "customer": { ... },
+  "acquirer_status": null  // Não consulta na Firebank
+}
+```
+
+**Quando usar:**
+- Listagem rápida de transações
+- Quando não precisa do status mais recente
+- Para economizar chamadas à API da Firebank
+
+---
+
+## ✅ Consulta com Sincronização (Recomendado)
+
+Consulta o status atualizado na Firebank e sincroniza automaticamente o status local.
+
+```bash
+GET /transactions/{id}?payment_type={TIPO}
+```
+
+### Tipos Suportados:
+- `PIX` - Para pagamentos PIX
+- `CREDIT_CARD` - Para cartão de crédito
+- `BILLET` - Para boleto bancário
+
+**Exemplo PIX:**
+```bash
+curl --request GET \
+  --url 'https://api.econpay.com.br/transactions/225?payment_type=PIX' \
+  --header 'Authorization: Bearer SEU_TOKEN'
+```
+
+**Resposta:**
+```json
+{
+  "id": 225,
+  "status": 2,
+  "status_payment_name": "APPROVED",  // ✅ Nome legível
+  "amount": 500,
+  "type": "pix",
+  "customer": { ... },
+  "acquirer_status": {
+    "id": "ee1456c0-66da-4eac-9f80-96fefb3e7f3b",
+    "operation": {
+      "status": "PAID",  // Status na Firebank
+      "value": 5,
+      "provider": "celcoin"
+    },
+    "history": [
+      {
+        "status": "WAITING_PAYMENT",
+        "createdAt": "2025-10-28T21:59:45.068Z"
+      },
+      {
+        "status": "PAID",
+        "createdAt": "2025-10-28T22:00:04.192Z"
+      }
+    ],
+    "payer": {
+      "fullName": "João da Silva",
+      "document": "***380023**"
+    }
+  }
+}
+```
+
+**Quando usar:**
+- Verificar se um pagamento foi aprovado
+- Obter dados atualizados do pagador
+- Ver histórico de mudanças de status
+- Sincronizar status quando webhook falhar
+
+---
+
+## 🔄 Como Funciona a Sincronização
+
+Quando você usa `?payment_type=PIX`:
+
+1. **Busca no banco local** - Pega os dados da transação
+2. **Consulta na Firebank** - Busca status atualizado usando o `transactionId`
+3. **Compara status** - Verifica se há divergência
+4. **Sincroniza automaticamente** - Atualiza o status local se necessário
+5. **Retorna dados completos** - Status sincronizado + dados da Firebank
+
+### Mapeamento de Status
+
+| Status Firebank | Código | Nome (`status_payment_name`) | Descrição |
+|-----------------|--------|------------------------------|-----------|
+| `WAITING_CONFIRMATION` | 1 | `PENDING` | ⏳ Aguardando confirmação |
+| `WAITING_PAYMENT` | 1 | `PENDING` | ⏳ Aguardando pagamento |
+| `PAID` | 2 | `APPROVED` | ✅ Pago |
+| `APPROVED` | 2 | `APPROVED` | ✅ Aprovado |
+| `FAILED` | 3 | `FAILED` | ❌ Falhou |
+| `CANCELLED` | 3 | `FAILED` | ❌ Cancelado |
+| `REFUNDED` | 4 | `REFUNDED` | 💰 Estornado |
+
+<Note>
+  **Recomendação:** Use `status_payment_name` em vez de `status` para melhor legibilidade no código.
+</Note>
+
+---
+
+## 📊 Exemplos Práticos
+
+### Verificar se PIX foi Pago
+
+```javascript
+async function checkPixPayment(transactionId) {
+  const response = await fetch(
+    `https://api.econpay.com.br/transactions/${transactionId}?payment_type=PIX`,
+    {
+      headers: { 'Authorization': `Bearer ${token}` }
+    }
+  );
+  
+  const transaction = await response.json();
+  
+  // Status já vem sincronizado - usando nome legível
+  if (transaction.status_payment_name === 'APPROVED') {
+    console.log('✅ Pagamento aprovado!');
+    console.log('Pago por:', transaction.acquirer_status.payer.fullName);
+    console.log('Valor:', `R$ ${transaction.amount / 100}`);
+    return true;
+  }
+  
+  if (transaction.status_payment_name === 'PENDING') {
+    console.log('⏳ Aguardando pagamento...');
+    return false;
+  }
+  
+  console.log('❌ Pagamento falhou');
+  return false;
+}
+
+// Uso
+const isPaid = await checkPixPayment(225);
+```
+
+### Obter Histórico de Status
+
+```javascript
+async function getPaymentHistory(transactionId) {
+  const response = await fetch(
+    `https://api.econpay.com.br/transactions/${transactionId}?payment_type=PIX`,
+    {
+      headers: { 'Authorization': `Bearer ${token}` }
+    }
+  );
+  
+  const transaction = await response.json();
+  
+  if (transaction.acquirer_status?.history) {
+    console.log('📜 Histórico de Status:');
+    transaction.acquirer_status.history.forEach(event => {
+      const date = new Date(event.createdAt).toLocaleString('pt-BR');
+      console.log(`${date} - ${event.status}`);
+    });
+  }
+}
+```
+
+### Sincronizar Múltiplas Transações
+
+```javascript
+async function syncPendingTransactions(transactionIds) {
+  const results = await Promise.all(
+    transactionIds.map(id =>
+      fetch(
+        `https://api.econpay.com.br/transactions/${id}?payment_type=PIX`,
+        {
+          headers: { 'Authorization': `Bearer ${token}` }
+        }
+      ).then(r => r.json())
+    )
+  );
+  
+  const approved = results.filter(t => t.status_payment_name === 'APPROVED');
+  const pending = results.filter(t => t.status_payment_name === 'PENDING');
+  
+  console.log(`✅ ${approved.length} aprovadas`);
+  console.log(`⏳ ${pending.length} pendentes`);
+  
+  return { approved, pending };
+}
+
+// Sincronizar transações pendentes
+const { approved, pending } = await syncPendingTransactions([225, 226, 227]);
+```
+
+---
+
+## ⚠️ Importante
+
+### Quando a Sincronização NÃO Acontece
+
+A sincronização automática **não atualiza** o status local se:
+
+1. **Status já é final** - Transação já está aprovada (2), falhada (3) ou estornada (4)
+2. **Sem transactionId** - Falta o ID da transação na Firebank
+3. **Erro na consulta** - Firebank está indisponível (retorna dados locais)
+
+### Boas Práticas
+
+✅ **Faça:**
+- Use `?payment_type=PIX` para verificar pagamentos pendentes
+- Consulte com sincronização quando webhook falhar
+- Use consulta local para listagens rápidas
+
+❌ **Evite:**
+- Consultar com sincronização em loops frequentes (use webhooks)
+- Sincronizar transações já finalizadas (desnecessário)
+- Fazer polling constante (prefira webhooks)
+
+---
+
+## 🔗 Endpoints Relacionados
+
+<CardGroup cols={2}>
+  <Card title="Listar Transações" icon="list" href="/api-reference/transactions/list">
+    Consultar múltiplas transações
+  </Card>
+  <Card title="Webhooks" icon="webhook" href="/guides/webhooks">
+    Receber notificações automáticas
+  </Card>
+  <Card title="Criar Pagamento" icon="credit-card" href="/api-reference/payments/create-payment">
+    Processar novo pagamento
+  </Card>
+  <Card title="Reembolso" icon="rotate-left" href="/api-reference/payments/refund">
+    Estornar transação
+  </Card>
+</CardGroup>
+
+---
+
+## 🆘 Troubleshooting
+
+### Status não sincroniza
+
+**Problema:** Status local continua PENDING mesmo após pagamento
+
+**Solução:**
+1. Verifique se está usando `?payment_type=PIX`
+2. Confirme que o `transactionId` existe no `response_data_subacquirer_integration`
+3. Verifique logs do servidor para erros na consulta à Firebank
+
+### acquirer_status retorna null
+
+**Problema:** Campo `acquirer_status` vem vazio
+
+**Causas possíveis:**
+- Não forneceu o parâmetro `payment_type`
+- Transação não tem `transactionId` da Firebank
+- Erro na comunicação com a Firebank
+
+**Solução:** Adicione `?payment_type=PIX` na URL
+
+### Webhook falhou mas status não atualiza
+
+**Problema:** Webhook retornou erro mas status continua PENDING
+
+**Solução:** Use consulta com sincronização:
+```bash
+GET /transactions/{id}?payment_type=PIX
+```
+
+Isso força a sincronização mesmo quando o webhook falha.

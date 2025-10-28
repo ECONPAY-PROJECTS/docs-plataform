@@ -26,6 +26,7 @@
             "pages": [
               "guides/environments",
               "guides/split-payments",
+              "guides/transaction-queries",
               "guides/errors",
               "guides/webhooks"
             ]

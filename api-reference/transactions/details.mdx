@@ -9,6 +9,10 @@ description: "Obter detalhes completos de uma transação"
 
 Retorna informações detalhadas de uma transação específica, incluindo dados do cliente, itens, status e informações de pagamento.
 
+<Note>
+  **Consulta na Adquirente:** Use o query parameter `payment_type` para consultar o status atualizado diretamente na Firebank (PIX, CREDIT_CARD, BILLET).
+</Note>
+
 ## Headers
 
 <ParamField header="Authorization" type="string" required>
@@ -19,6 +23,22 @@ Retorna informações detalhadas de uma transação específica, incluindo dados
 
 <ParamField path="id" type="number" required>
   ID da transação
+</ParamField>
+
+## Query Parameters
+
+<ParamField query="payment_type" type="string">
+  Tipo de pagamento para consulta e sincronização com a adquirente (opcional)
+  - `PIX` - Consulta PIX na Firebank e sincroniza status automaticamente
+  - `CREDIT_CARD` - Consulta cartão de crédito na Firebank
+  - `BILLET` - Consulta boleto na Firebank
+  
+  **Importante:** Quando fornecido, o sistema:
+  1. Consulta o status atualizado na Firebank
+  2. Sincroniza automaticamente o status local se estiver desatualizado
+  3. Retorna dados atualizados no campo `acquirer_status`
+  
+  Se não informado, retorna apenas dados do banco local (sem sincronização).
 </ParamField>
 
 ## Response
@@ -32,7 +52,36 @@ Retorna informações detalhadas de uma transação específica, incluindo dados
 </ResponseField>
 
 <ResponseField name="status" type="number">
-  Status (1=PENDING, 2=APPROVED, 3=FAILED, 4=REFUNDED)
+  Código numérico do status (sincronizado automaticamente quando `payment_type` é fornecido)
+  - `1` = PENDING
+  - `2` = APPROVED
+  - `3` = FAILED
+  - `4` = REFUNDED
+</ResponseField>
+
+<ResponseField name="status_payment_name" type="string">
+  Nome legível do status do pagamento
+  - `PENDING` - Aguardando pagamento
+  - `APPROVED` - Pagamento aprovado ✅
+  - `FAILED` - Pagamento falhou ❌
+  - `REFUNDED` - Pagamento estornado 💰
+</ResponseField>
+
+<ResponseField name="acquirer_status" type="object">
+  Status atualizado consultado diretamente na Firebank (apenas quando `payment_type` é fornecido)
+  <Expandable title="properties">
+    <ResponseField name="operation.status" type="string">
+      Status na Firebank: WAITING_PAYMENT, PAID, FAILED, etc.
+    </ResponseField>
+    
+    <ResponseField name="operation.value" type="number">
+      Valor da transação na Firebank
+    </ResponseField>
+    
+    <ResponseField name="history" type="array">
+      Histórico de mudanças de status na Firebank
+    </ResponseField>
+  </Expandable>
 </ResponseField>
 
 <ResponseField name="amount" type="number">
@@ -122,13 +171,25 @@ Retorna informações detalhadas de uma transação específica, incluindo dados
 
 <RequestExample>
 
-```bash cURL
+```bash Consulta Local (Banco de Dados)
 curl --request GET \
   --url https://api.econpay.com.br/transactions/123 \
   --header 'Authorization: Bearer SEU_TOKEN_JWT'
 ```
 
-```javascript JavaScript
+```bash Consulta PIX na Firebank
+curl --request GET \
+  --url 'https://api.econpay.com.br/transactions/123?payment_type=PIX' \
+  --header 'Authorization: Bearer SEU_TOKEN_JWT'
+```
+
+```bash Consulta Boleto na Firebank
+curl --request GET \
+  --url 'https://api.econpay.com.br/transactions/123?payment_type=BILLET' \
+  --header 'Authorization: Bearer SEU_TOKEN_JWT'
+```
+
+```javascript Consulta Local
 const transactionId = 123;
 
 const response = await fetch(
@@ -144,9 +205,34 @@ console.log('Pedido:', transaction.order_number);
 console.log('Status:', transaction.status);
 console.log('Valor:', `R$ ${transaction.amount / 100}`);
 console.log('Cliente:', transaction.customer.name);
+```
 
-if (transaction.payment_type === 'pix' && transaction.pix_qr_code) {
-  console.log('QR Code PIX:', transaction.pix_qr_code);
+```javascript Consulta PIX com Sincronização Automática
+const transactionId = 123;
+
+// Consultar e sincronizar status com a Firebank
+const response = await fetch(
+  `https://api.econpay.com.br/transactions/${transactionId}?payment_type=PIX`,
+  {
+    headers: { 'Authorization': `Bearer ${token}` }
+  }
+);
+
+const transaction = await response.json();
+
+console.log('Status Sincronizado:', transaction.status); // Atualizado automaticamente
+console.log('Status Firebank:', transaction.acquirer_status.operation.status);
+
+// Verificar se foi pago
+if (transaction.status === 2) {
+  console.log('✅ Pagamento aprovado!');
+  console.log('Histórico:', transaction.acquirer_status.history);
+}
+
+// acquirer_status contém a resposta completa da Firebank
+if (transaction.acquirer_status) {
+  console.log('Valor pago:', transaction.acquirer_status.operation.value);
+  console.log('Pagador:', transaction.acquirer_status.payer.fullName);
 }
 ```
 
@@ -199,6 +285,7 @@ curl_close($ch);
   "id": 123,
   "order_number": "ORD-20240122-123456",
   "status": 2,
+  "status_payment_name": "APPROVED",
   "amount": 10000,
   "payment_type": "pix",
   "installments": 1,
