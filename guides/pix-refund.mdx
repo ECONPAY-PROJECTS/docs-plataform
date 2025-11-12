@@ -1,0 +1,596 @@
+---
+title: "Estorno PIX"
+description: "Guia completo sobre como processar estornos de transações PIX"
+---
+
+## Visão Geral
+
+O estorno PIX permite devolver valores pagos via PIX de forma total ou parcial. Este guia explica como implementar estornos PIX em sua aplicação usando a API EconPay.
+
+<Note>
+  **Importante:** Estornos PIX são processados através da Firebank e seguem as regras estabelecidas pelo Banco Central do Brasil.
+</Note>
+
+## Quando Usar Estorno PIX
+
+O estorno PIX é ideal para:
+
+- **Cancelamento de Compras:** Cliente desiste da compra após pagamento
+- **Devolução de Produtos:** Produto com defeito ou não entregue
+- **Ajuste de Valores:** Cobrança incorreta ou desconto posterior
+- **Reembolso Parcial:** Devolução de apenas parte do valor pago
+
+## Requisitos
+
+Para processar um estorno PIX, a transação deve atender aos seguintes requisitos:
+
+<AccordionGroup>
+  <Accordion title="Status PAID">
+    A transação deve estar com status **PAID** (paga). Transações pendentes, canceladas ou já estornadas não podem ser estornadas.
+    
+    ```javascript
+    // Verificar status antes de estornar
+    const transaction = await getTransaction(transactionId);
+    
+    if (transaction.status !== 'PAID') {
+      console.error('Transação não pode ser estornada');
+      return;
+    }
+    ```
+  </Accordion>
+  
+  <Accordion title="Prazo de 90 Dias">
+    O estorno deve ser solicitado em até **90 dias** após o pagamento original.
+    
+    ```javascript
+    // Verificar prazo
+    const paymentDate = new Date(transaction.created_at);
+    const today = new Date();
+    const daysDiff = Math.floor((today - paymentDate) / (1000 * 60 * 60 * 24));
+    
+    if (daysDiff > 90) {
+      console.error('Prazo de estorno expirado');
+      return;
+    }
+    ```
+  </Accordion>
+  
+  <Accordion title="Saldo Disponível">
+    Sua conta deve ter **saldo suficiente** para processar o estorno.
+    
+    O valor será debitado da sua conta e creditado na conta do pagador.
+  </Accordion>
+  
+  <Accordion title="Valor Válido">
+    O valor do estorno (ou soma de estornos parciais) não pode exceder o valor original da transação.
+    
+    ```javascript
+    // Validar valor do estorno
+    if (refundAmount > transaction.amount) {
+      console.error('Valor do estorno excede valor original');
+      return;
+    }
+    ```
+  </Accordion>
+</AccordionGroup>
+
+## Tipos de Estorno
+
+### Estorno Total
+
+Devolve 100% do valor da transação PIX.
+
+```javascript
+// Estorno total - não enviar campo amount
+const refund = await fetch('https://api.econpay.com.br/payments/pix/refund', {
+  method: 'POST',
+  headers: {
+    'Authorization': `Bearer ${token}`,
+    'Content-Type': 'application/json'
+  },
+  body: JSON.stringify({
+    transaction_id: 123,
+    description: 'Cancelamento da compra'
+  })
+});
+
+const result = await refund.json();
+console.log('Estorno total processado:', result);
+```
+
+### Estorno Parcial
+
+Devolve apenas parte do valor da transação PIX.
+
+```javascript
+// Estorno parcial - enviar campo amount
+const refund = await fetch('https://api.econpay.com.br/payments/pix/refund', {
+  method: 'POST',
+  headers: {
+    'Authorization': `Bearer ${token}`,
+    'Content-Type': 'application/json'
+  },
+  body: JSON.stringify({
+    transaction_id: 124,
+    amount: 50.00, // R$ 50,00
+    description: 'Devolução parcial - 1 item'
+  })
+});
+
+const result = await refund.json();
+console.log('Estorno parcial processado:', result);
+```
+
+<Warning>
+  **Múltiplos Estornos Parciais:** Você pode fazer vários estornos parciais, mas a soma de todos não pode exceder o valor original da transação.
+</Warning>
+
+## Fluxo Completo
+
+<Steps>
+  <Step title="Buscar Transação">
+    Primeiro, busque a transação para verificar se ela pode ser estornada.
+    
+    ```javascript
+    const transaction = await fetch(
+      `https://api.econpay.com.br/transactions/${transactionId}`,
+      {
+        headers: {
+          'Authorization': `Bearer ${token}`
+        }
+      }
+    );
+    
+    const data = await transaction.json();
+    ```
+  </Step>
+  
+  <Step title="Validar Elegibilidade">
+    Verifique se a transação atende aos requisitos para estorno.
+    
+    ```javascript
+    function canRefund(transaction) {
+      // Verificar status
+      if (transaction.status !== 'PAID') {
+        return { can: false, reason: 'Status inválido' };
+      }
+      
+      // Verificar tipo
+      if (transaction.type !== 'pix') {
+        return { can: false, reason: 'Não é transação PIX' };
+      }
+      
+      // Verificar prazo
+      const paymentDate = new Date(transaction.created_at);
+      const today = new Date();
+      const daysDiff = Math.floor((today - paymentDate) / (1000 * 60 * 60 * 24));
+      
+      if (daysDiff > 90) {
+        return { can: false, reason: 'Prazo expirado' };
+      }
+      
+      return { can: true };
+    }
+    
+    const eligibility = canRefund(data.transaction);
+    
+    if (!eligibility.can) {
+      console.error('Não pode estornar:', eligibility.reason);
+      return;
+    }
+    ```
+  </Step>
+  
+  <Step title="Processar Estorno">
+    Envie a requisição de estorno para a API.
+    
+    ```javascript
+    const refund = await fetch('https://api.econpay.com.br/payments/pix/refund', {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${token}`,
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({
+        transaction_id: transactionId,
+        amount: refundAmount, // Opcional
+        description: 'Motivo do estorno'
+      })
+    });
+    
+    const result = await refund.json();
+    ```
+  </Step>
+  
+  <Step title="Tratar Resposta">
+    Verifique o resultado e atualize sua aplicação.
+    
+    ```javascript
+    if (result.success) {
+      console.log('Estorno processado com sucesso!');
+      console.log('Transaction ID:', result.transaction.id);
+      console.log('Valor estornado:', result.transaction.refunded_amount / 100);
+      console.log('Data do estorno:', result.transaction.refunded_at);
+      
+      // Atualizar interface do usuário
+      updateUI({
+        status: 'REFUNDED',
+        message: 'Estorno processado com sucesso'
+      });
+    } else {
+      console.error('Erro ao processar estorno:', result.error);
+      
+      // Mostrar mensagem de erro ao usuário
+      showError(result.error);
+    }
+    ```
+  </Step>
+</Steps>
+
+## Exemplos Práticos
+
+### Exemplo 1: Cancelamento de Compra
+
+```javascript
+async function cancelarCompra(transactionId) {
+  try {
+    // 1. Buscar transação
+    const transactionResponse = await fetch(
+      `https://api.econpay.com.br/transactions/${transactionId}`,
+      {
+        headers: {
+          'Authorization': `Bearer ${token}`
+        }
+      }
+    );
+    
+    const { transaction } = await transactionResponse.json();
+    
+    // 2. Validar se pode estornar
+    if (transaction.status !== 'PAID') {
+      throw new Error('Transação não está paga');
+    }
+    
+    if (transaction.type !== 'pix') {
+      throw new Error('Transação não é PIX');
+    }
+    
+    // 3. Processar estorno total
+    const refundResponse = await fetch(
+      'https://api.econpay.com.br/payments/pix/refund',
+      {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          transaction_id: transactionId,
+          description: 'Cancelamento da compra pelo cliente'
+        })
+      }
+    );
+    
+    const refund = await refundResponse.json();
+    
+    if (refund.success) {
+      console.log('Compra cancelada com sucesso!');
+      console.log('Valor estornado: R$', refund.transaction.refunded_amount / 100);
+      return refund;
+    } else {
+      throw new Error(refund.error);
+    }
+  } catch (error) {
+    console.error('Erro ao cancelar compra:', error.message);
+    throw error;
+  }
+}
+
+// Usar
+cancelarCompra(123)
+  .then(refund => {
+    alert('Compra cancelada! Valor será creditado em instantes.');
+  })
+  .catch(error => {
+    alert('Erro ao cancelar: ' + error.message);
+  });
+```
+
+### Exemplo 2: Devolução Parcial
+
+```javascript
+async function devolverProduto(transactionId, valorProduto, nomeProduto) {
+  try {
+    // Processar estorno parcial
+    const refundResponse = await fetch(
+      'https://api.econpay.com.br/payments/pix/refund',
+      {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          transaction_id: transactionId,
+          amount: valorProduto,
+          description: `Devolução do produto: ${nomeProduto}`
+        })
+      }
+    );
+    
+    const refund = await refundResponse.json();
+    
+    if (refund.success) {
+      console.log('Produto devolvido com sucesso!');
+      console.log('Valor estornado: R$', refund.transaction.refunded_amount / 100);
+      
+      // Registrar devolução no sistema
+      await registrarDevolucao({
+        transactionId,
+        produto: nomeProduto,
+        valor: valorProduto,
+        data: refund.transaction.refunded_at
+      });
+      
+      return refund;
+    } else {
+      throw new Error(refund.error);
+    }
+  } catch (error) {
+    console.error('Erro ao devolver produto:', error.message);
+    throw error;
+  }
+}
+
+// Usar
+devolverProduto(124, 50.00, 'Camiseta Azul')
+  .then(refund => {
+    alert('Produto devolvido! R$ 50,00 será creditado.');
+  })
+  .catch(error => {
+    alert('Erro na devolução: ' + error.message);
+  });
+```
+
+### Exemplo 3: Múltiplos Estornos Parciais
+
+```javascript
+async function devolverMultiplosProdutos(transactionId, produtos) {
+  const resultados = [];
+  
+  for (const produto of produtos) {
+    try {
+      const refund = await fetch(
+        'https://api.econpay.com.br/payments/pix/refund',
+        {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${token}`,
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify({
+            transaction_id: transactionId,
+            amount: produto.valor,
+            description: `Devolução: ${produto.nome}`
+          })
+        }
+      );
+      
+      const result = await refund.json();
+      
+      if (result.success) {
+        resultados.push({
+          produto: produto.nome,
+          valor: produto.valor,
+          sucesso: true
+        });
+      } else {
+        resultados.push({
+          produto: produto.nome,
+          valor: produto.valor,
+          sucesso: false,
+          erro: result.error
+        });
+      }
+    } catch (error) {
+      resultados.push({
+        produto: produto.nome,
+        valor: produto.valor,
+        sucesso: false,
+        erro: error.message
+      });
+    }
+  }
+  
+  return resultados;
+}
+
+// Usar
+const produtos = [
+  { nome: 'Camiseta', valor: 30.00 },
+  { nome: 'Calça', valor: 50.00 }
+];
+
+devolverMultiplosProdutos(125, produtos)
+  .then(resultados => {
+    const sucesso = resultados.filter(r => r.sucesso);
+    const falha = resultados.filter(r => !r.sucesso);
+    
+    console.log(`${sucesso.length} produtos devolvidos com sucesso`);
+    console.log(`${falha.length} produtos com erro`);
+    
+    if (falha.length > 0) {
+      console.error('Erros:', falha);
+    }
+  });
+```
+
+## Tratamento de Erros
+
+### Erros Comuns
+
+<AccordionGroup>
+  <Accordion title="Transação Não Encontrada">
+    **Erro:** `TRANSACTION_NOT_FOUND`
+    
+    **Causa:** ID da transação inválido ou transação não existe
+    
+    **Solução:**
+    ```javascript
+    if (error.code === 'TRANSACTION_NOT_FOUND') {
+      console.error('Transação não encontrada. Verifique o ID.');
+      // Solicitar ID correto ao usuário
+    }
+    ```
+  </Accordion>
+  
+  <Accordion title="Transação Não é PIX">
+    **Erro:** `TRANSACTION_NOT_PIX`
+    
+    **Causa:** Tentativa de estornar transação que não é PIX
+    
+    **Solução:**
+    ```javascript
+    if (error.code === 'TRANSACTION_NOT_PIX') {
+      console.error('Use /payments/reversal para outros tipos de pagamento');
+      // Redirecionar para endpoint correto
+    }
+    ```
+  </Accordion>
+  
+  <Accordion title="Prazo Expirado">
+    **Erro:** `REFUND_PERIOD_EXPIRED`
+    
+    **Causa:** Mais de 90 dias desde o pagamento
+    
+    **Solução:**
+    ```javascript
+    if (error.code === 'REFUND_PERIOD_EXPIRED') {
+      console.error('Prazo de estorno expirado (90 dias)');
+      // Informar usuário sobre prazo expirado
+      // Sugerir contato com suporte para casos especiais
+    }
+    ```
+  </Accordion>
+  
+  <Accordion title="Saldo Insuficiente">
+    **Erro:** `INSUFFICIENT_BALANCE`
+    
+    **Causa:** Conta sem saldo para processar estorno
+    
+    **Solução:**
+    ```javascript
+    if (error.code === 'INSUFFICIENT_BALANCE') {
+      console.error('Saldo insuficiente para estorno');
+      // Solicitar recarga de saldo
+      // Ou aguardar entrada de novos pagamentos
+    }
+    ```
+  </Accordion>
+  
+  <Accordion title="Valor Excede Original">
+    **Erro:** `REFUND_VALUE_EXCEEDS_ORIGINAL`
+    
+    **Causa:** Valor do estorno maior que valor original
+    
+    **Solução:**
+    ```javascript
+    if (error.code === 'REFUND_VALUE_EXCEEDS_ORIGINAL') {
+      console.error('Valor do estorno excede valor original');
+      // Ajustar valor do estorno
+      // Verificar se já houve estornos parciais anteriores
+    }
+    ```
+  </Accordion>
+</AccordionGroup>
+
+### Exemplo de Tratamento Completo
+
+```javascript
+async function processarEstornoComTratamento(transactionId, amount, description) {
+  try {
+    const response = await fetch('https://api.econpay.com.br/payments/pix/refund', {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${token}`,
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({
+        transaction_id: transactionId,
+        amount,
+        description
+      })
+    });
+    
+    const result = await response.json();
+    
+    if (!response.ok) {
+      // Tratar erros HTTP
+      switch (response.status) {
+        case 400:
+          throw new Error(`Dados inválidos: ${result.error}`);
+        case 404:
+          throw new Error('Transação não encontrada');
+        case 500:
+          throw new Error('Erro no servidor. Tente novamente mais tarde.');
+        default:
+          throw new Error(`Erro desconhecido: ${result.error}`);
+      }
+    }
+    
+    if (!result.success) {
+      throw new Error(result.error);
+    }
+    
+    return result;
+  } catch (error) {
+    console.error('Erro ao processar estorno:', error.message);
+    
+    // Log para monitoramento
+    logError({
+      type: 'PIX_REFUND_ERROR',
+      transactionId,
+      amount,
+      error: error.message,
+      timestamp: new Date().toISOString()
+    });
+    
+    throw error;
+  }
+}
+```
+
+## Boas Práticas
+
+<CardGroup cols={2}>
+  <Card title="Validar Antes de Estornar" icon="check">
+    Sempre valide se a transação pode ser estornada antes de enviar a requisição
+  </Card>
+  <Card title="Informar o Cliente" icon="bell">
+    Notifique o cliente sobre o estorno e o prazo para crédito
+  </Card>
+  <Card title="Registrar Motivo" icon="file-text">
+    Sempre inclua uma descrição clara do motivo do estorno
+  </Card>
+  <Card title="Monitorar Erros" icon="chart-line">
+    Implemente logs para rastrear estornos com erro
+  </Card>
+</CardGroup>
+
+## Próximos Passos
+
+<CardGroup cols={2}>
+  <Card title="API Reference" icon="code" href="/api-reference/payments/pix-refund">
+    Documentação completa do endpoint
+  </Card>
+  <Card title="Webhooks" icon="webhook" href="/guides/webhooks">
+    Receba notificações de estornos
+  </Card>
+  <Card title="Transações" icon="list" href="/api-reference/transactions/list">
+    Consulte histórico de estornos
+  </Card>
+  <Card title="Erros" icon="triangle-exclamation" href="/guides/errors">
+    Lista completa de códigos de erro
+  </Card>
+</CardGroup>
+

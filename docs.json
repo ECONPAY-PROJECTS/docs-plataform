@@ -26,6 +26,7 @@
             "pages": [
               "guides/environments",
               "guides/split-payments",
+              "guides/pix-refund",
               "guides/transaction-queries",
               "guides/errors",
               "guides/webhooks"
@@ -47,7 +48,8 @@
             "group": "Pagamentos",
             "pages": [
               "api-reference/payments/create-payment",
-              "api-reference/payments/refund"
+              "api-reference/payments/refund",
+              "api-reference/payments/pix-refund"
             ]
           },
           {
